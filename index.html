@@ -1878,9 +1878,23 @@ function drNavRight(dir) {
   renderDrCals();
 }
 
+function drSelectDay(y, m, d) {
+  const date = new Date(y, m, d);
+  if (drSelecting === 'from' || (!drFrom && !drTo)) {
+    drFrom = date; drTo = null; drSelecting = 'to';
+  } else {
+    if (date < drFrom) { drTo = drFrom; drFrom = date; }
+    else drTo = date;
+    drSelecting = 'from';
+  }
+  drHover = null;
+  renderDrCals();
+}
+
 function renderDrCals() {
   document.getElementById('dr-cal-left').innerHTML  = buildDrCal(drLeftYear,  drLeftMonth,  'L');
   document.getElementById('dr-cal-right').innerHTML = buildDrCal(drRightYear, drRightMonth, 'R');
+  attachDrEvents();
   updateDrDisplay();
 }
 
@@ -1889,13 +1903,11 @@ function buildDrCal(year, month, side) {
   const firstDow = new Date(year, month, 1).getDay();
   const daysInMonth = new Date(year, month+1, 0).getDate();
   const prevDays = new Date(year, month, 0).getDate();
-  const navPrev = side === 'L' ? "drNavLeft(-1)" : "drNavRight(-1)";
-  const navNext = side === 'L' ? "drNavLeft(1)"  : "drNavRight(1)";
 
   let html = `<div class="dr-cal-header">
-    <button class="dr-cal-nav" onclick="${navPrev}">‹</button>
+    <button class="dr-cal-nav" data-nav="${side}:-1">‹</button>
     <div class="dr-cal-title">${DR_MONTHS[month]} ${year}</div>
-    <button class="dr-cal-nav" onclick="${navNext}">›</button>
+    <button class="dr-cal-nav" data-nav="${side}:1">›</button>
   </div>
   <div class="dr-cal-grid">`;
 
@@ -1915,23 +1927,16 @@ function buildDrCal(year, month, side) {
     const isToday = date.toDateString() === today.toDateString();
     if (isToday) cls += ' today';
 
-    // Range highlight
     const fromTs = drFrom ? drFrom.getTime() : null;
     const toTs   = drTo   ? drTo.getTime()   : null;
     const hoverTs = drHover ? drHover.getTime() : null;
-
-    // End of range (for hover preview when selecting 'to')
     const effectiveTo = toTs ?? (drSelecting === 'to' && hoverTs ? hoverTs : null);
 
     if (fromTs && dts === fromTs) cls += ' range-start';
     if (effectiveTo && dts === effectiveTo) cls += ' range-end';
     if (fromTs && effectiveTo && dts > fromTs && dts < effectiveTo) cls += ' in-range';
 
-    html += `<div class="${cls}" 
-      onclick="drSelectDay(${year},${month},${d})"
-      onmouseover="drHoverDay(${year},${month},${d})"
-      onmouseout="drHoverDay(0,0,0)"
-    >${d}</div>`;
+    html += `<div class="${cls}" data-date="${year}-${month}-${d}">${d}</div>`;
   }
 
   // Next month fill
@@ -1945,22 +1950,43 @@ function buildDrCal(year, month, side) {
   return html;
 }
 
-function drSelectDay(y, m, d) {
-  const date = new Date(y, m, d);
-  if (drSelecting === 'from' || (!drFrom && !drTo)) {
-    drFrom = date; drTo = null; drSelecting = 'to';
-  } else {
-    if (date < drFrom) { drTo = drFrom; drFrom = date; }
-    else drTo = date;
-    drSelecting = 'from';
-  }
-  drHover = null;
-  renderDrCals();
-}
+function attachDrEvents() {
+  const popup = document.getElementById('dr-popup');
+  if (!popup || popup._drEventsAttached) return;
+  popup._drEventsAttached = true;
 
-function drHoverDay(y, m, d) {
-  drHover = (y && drSelecting === 'to' && drFrom) ? new Date(y, m, d) : null;
-  renderDrCals();
+  popup.addEventListener('click', e => {
+    // Nav buttons
+    const nav = e.target.closest('[data-nav]');
+    if (nav) {
+      const [side, dirStr] = nav.dataset.nav.split(':');
+      const dir = parseInt(dirStr);
+      if (side === 'L') drNavLeft(dir); else drNavRight(dir);
+      return;
+    }
+    // Day cells
+    const day = e.target.closest('.dr-day:not(.other-month)');
+    if (day && day.dataset.date) {
+      const [y, m, d] = day.dataset.date.split('-').map(Number);
+      drSelectDay(y, m, d);
+    }
+  });
+
+  popup.addEventListener('mouseover', e => {
+    const day = e.target.closest('.dr-day:not(.other-month)');
+    if (day && day.dataset.date) {
+      const [y, m, d] = day.dataset.date.split('-').map(Number);
+      drHover = (drSelecting === 'to' && drFrom) ? new Date(y, m, d) : null;
+      renderDrCals();
+    }
+  });
+
+  popup.addEventListener('mouseout', e => {
+    if (!e.target.closest('.dr-cal-grid')) {
+      drHover = null;
+      renderDrCals();
+    }
+  });
 }
 
 function updateDrDisplay() {
