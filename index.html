@@ -1053,6 +1053,18 @@ let strategies = [...DEFAULT_STRATEGIES];
 let activeStrategyName = null;
 let stratPnlChart = null, stratSessionChart = null;
 let currentSide = 'BUY';
+
+// ===== RESULT NORMALISER =====
+// Ground truth: if PnL is recorded, derive WIN/LOSS from its sign.
+// Fallback to stored result field for trades without PnL.
+function tradeResult(t) {
+  if (t.pnl !== null && t.pnl !== undefined) {
+    return t.pnl >= 0 ? 'WIN' : 'LOSS';
+  }
+  return t.result || 'WIN';
+}
+function isWin(t)  { return tradeResult(t) === 'WIN'; }
+function isLoss(t) { return tradeResult(t) === 'LOSS'; }
 let currentResult = 'WIN';
 let currentPeriod = 'day';
 let currentImages = [];
@@ -1339,7 +1351,7 @@ function buildDayMap() {
     if (!map[key]) map[key] = { pnl: 0, trades: 0, wins: 0, losses: 0 };
     map[key].pnl += (t.pnl || 0);
     map[key].trades++;
-    if (t.result === 'WIN') map[key].wins++; else map[key].losses++;
+    if (isWin(t)) map[key].wins++; else map[key].losses++;
   });
   return map;
 }
@@ -1610,8 +1622,8 @@ function openDayModal(dateKey) {
   const d = new Date(dateKey + 'T12:00:00');
   const label = d.toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric' });
   const totalPnl = dayTrades.reduce((s,t) => s+(t.pnl||0), 0);
-  const wins = dayTrades.filter(t=>t.result==='WIN').length;
-  const losses = dayTrades.filter(t=>t.result==='LOSS').length;
+  const wins = dayTrades.filter(t => isWin(t)).length;
+  const losses = dayTrades.filter(t => isLoss(t)).length;
   const pnlColor = totalPnl > 0 ? 'var(--win)' : totalPnl < 0 ? 'var(--loss)' : 'var(--muted)';
   const sign = totalPnl > 0 ? '+' : '';
 
@@ -1653,7 +1665,7 @@ function openDayModal(dateKey) {
               <td style="padding:10px 12px;font-family:'Roboto Mono';font-size:12px;">${t.entry||'—'}</td>
               <td style="padding:10px 12px;font-family:'Roboto Mono';font-size:12px;">${t.exit||'—'}</td>
               <td style="padding:10px 12px;">${pnlHtml}</td>
-              <td style="padding:10px 12px;"><span class="badge ${t.result==='WIN'?'badge-win':'badge-loss'}">${t.result}</span></td>
+              <td style="padding:10px 12px;"><span class="badge ${isWin(t)?'badge-win':'badge-loss'}">${tradeResult(t)}</span></td>
               <td style="padding:10px 12px;">${t.strategy?`<span class="badge badge-strat" style="font-size:10px;">${t.strategy}</span>`:'—'}</td>
               <td style="padding:10px 12px;"><div class="note-text">${t.note||'—'}</div></td>
               <td style="padding:10px 12px;" onclick="event.stopPropagation();closeDayModal();editTrade(${origIdx})"><button class="icon-btn" title="Edit">✏️</button></td>
@@ -1720,13 +1732,13 @@ function renderDashboard() {
 
 function renderKPI(data, containerId) {
   const totalPnl = data.reduce((s, t) => s + (t.pnl || 0), 0);
-  const wins = data.filter(t => t.result === 'WIN').length;
-  const losses = data.filter(t => t.result === 'LOSS').length;
+  const wins = data.filter(t => isWin(t)).length;
+  const losses = data.filter(t => isLoss(t)).length;
   const total = wins + losses;
   const wr = total ? ((wins / total) * 100).toFixed(1) : 0;
   const avgPnl = total ? (totalPnl / total).toFixed(2) : 0;
-  const grossWin = data.filter(t=>t.result==='WIN').reduce((s,t)=>s+(t.pnl||0),0);
-  const grossLoss = Math.abs(data.filter(t=>t.result==='LOSS').reduce((s,t)=>s+(t.pnl||0),0));
+  const grossWin = data.filter(t => isWin(t)).reduce((s,t)=>s+(t.pnl||0),0);
+  const grossLoss = Math.abs(data.filter(t => isLoss(t)).reduce((s,t)=>s+(t.pnl||0),0));
   const pf = grossLoss > 0 ? (grossWin / grossLoss).toFixed(2) : grossWin > 0 ? '∞' : '0';
 
   // Capital return: use ALL trades total for %, not filtered
@@ -1796,8 +1808,8 @@ function renderEquityChart(data) {
 }
 
 function renderWinChart(data) {
-  const wins = data.filter(t => t.result === 'WIN').length;
-  const losses = data.filter(t => t.result === 'LOSS').length;
+  const wins = data.filter(t => isWin(t)).length;
+  const losses = data.filter(t => isLoss(t)).length;
   const wr = (wins + losses) ? ((wins/(wins+losses))*100).toFixed(1) : 0;
   if (winChart) winChart.destroy();
   const ctx = document.getElementById('winChart').getContext('2d');
@@ -1916,7 +1928,7 @@ function renderTradeTable() {
       <td>${rrHtml}</td>
       <td style="font-family:'Roboto Mono';font-size:12px;">${t.lot || '—'}</td>
       <td>${pnlHtml}</td>
-      <td><span class="badge ${t.result === 'WIN' ? 'badge-win' : 'badge-loss'}">${t.result}</span></td>
+      <td><span class="badge ${isWin(t) ? 'badge-win' : 'badge-loss'}">${tradeResult(t)}</span></td>
       <td>${t.strategy ? `<span class="badge badge-strat">${t.strategy}</span>` : '—'}</td>
       <td><div class="note-text" title="${t.note || ''}">${t.note || '—'}</div></td>
       <td>${imgHtml}</td>
@@ -1943,7 +1955,7 @@ function renderStats() {
   trades.forEach(t => {
     const s = t.strategy || 'Unknown';
     if (!stratMap[s]) stratMap[s] = { w:0, l:0, pnl:0 };
-    if (t.result === 'WIN') stratMap[s].w++; else stratMap[s].l++;
+    if (isWin(t)) stratMap[s].w++; else stratMap[s].l++;
     stratMap[s].pnl += (t.pnl || 0);
   });
   document.getElementById('strat-table').innerHTML = Object.entries(stratMap).map(([s, d]) => {
@@ -1962,7 +1974,7 @@ function renderStats() {
   trades.forEach(t => {
     const p = t.pair || 'Unknown';
     if (!pairMap[p]) pairMap[p] = { w:0, l:0, pnl:0 };
-    if (t.result === 'WIN') pairMap[p].w++; else pairMap[p].l++;
+    if (isWin(t)) pairMap[p].w++; else pairMap[p].l++;
     pairMap[p].pnl += (t.pnl || 0);
   });
   document.getElementById('pair-table').innerHTML = Object.entries(pairMap).map(([p, d]) => {
@@ -1981,7 +1993,7 @@ function renderStats() {
   trades.forEach(t => {
     const s = t.side || 'BUY';
     if (!sideMap[s]) sideMap[s] = {w:0,l:0,pnl:0};
-    if (t.result === 'WIN') sideMap[s].w++; else sideMap[s].l++;
+    if (isWin(t)) sideMap[s].w++; else sideMap[s].l++;
     sideMap[s].pnl += (t.pnl || 0);
   });
   document.getElementById('side-table').innerHTML = Object.entries(sideMap).map(([s, d]) => {
@@ -2261,7 +2273,7 @@ function renderStratList() {
   }
   container.innerHTML = strategies.map(name => {
     const st = trades.filter(t => t.strategy === name);
-    const wins = st.filter(t => t.result === 'WIN').length;
+    const wins = st.filter(t => isWin(t)).length;
     const total = st.length;
     const wr = total ? Math.round(wins/total*100) : null;
     const pnl = st.reduce((s,t)=>s+(t.pnl||0),0);
@@ -2293,21 +2305,21 @@ function selectStrategy(name) {
 function renderStratDetail(name) {
   const panel = document.getElementById('strat-detail-panel');
   const st = trades.filter(t => t.strategy === name);
-  const wins = st.filter(t=>t.result==='WIN').length;
-  const losses = st.filter(t=>t.result==='LOSS').length;
+  const wins = st.filter(t => isWin(t)).length;
+  const losses = st.filter(t => isLoss(t)).length;
   const total = st.length;
   const wr = total ? (wins/total*100).toFixed(1) : 0;
   const pnl = st.reduce((s,t)=>s+(t.pnl||0),0);
   const avgPnl = total ? (pnl/total).toFixed(2) : 0;
-  const grossWin = st.filter(t=>t.result==='WIN').reduce((s,t)=>s+(t.pnl||0),0);
-  const grossLoss = Math.abs(st.filter(t=>t.result==='LOSS').reduce((s,t)=>s+(t.pnl||0),0));
+  const grossWin = st.filter(t => isWin(t)).reduce((s,t)=>s+(t.pnl||0),0);
+  const grossLoss = Math.abs(st.filter(t => isLoss(t)).reduce((s,t)=>s+(t.pnl||0),0));
   const pf = grossLoss>0 ? (grossWin/grossLoss).toFixed(2) : grossWin>0?'∞':'0';
   const pnlColor = pnl>=0?'var(--win)':'var(--loss)';
   const wrColor  = parseFloat(wr)>=55?'var(--win)':parseFloat(wr)>=40?'var(--warn)':'var(--loss)';
 
   // Best session
   const sessionMap = {};
-  st.forEach(t => { const s=t.session||'Unknown'; if(!sessionMap[s])sessionMap[s]={w:0,total:0}; sessionMap[s].total++; if(t.result==='WIN')sessionMap[s].w++; });
+  st.forEach(t => { const s=t.session||'Unknown'; if(!sessionMap[s])sessionMap[s]={w:0,total:0}; sessionMap[s].total++; if (isWin(t))sessionMap[s].w++; });
   const bestSession = Object.entries(sessionMap).sort((a,b)=>(b[1].w/b[1].total)-(a[1].w/a[1].total))[0];
 
   // Monthly P&L data
@@ -2332,7 +2344,7 @@ function renderStratDetail(name) {
     if(!t.date)return;
     const d=new Date(t.date).getDay();
     const k=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d];
-    if(dowMap[k]){dowMap[k].t++;if(t.result==='WIN')dowMap[k].w++;}
+    if(dowMap[k]){dowMap[k].t++;if (isWin(t))dowMap[k].w++;}
   });
   const maxDowTotal=Math.max(...dowKeys.map(k=>dowMap[k].t),1);
 
@@ -2344,7 +2356,7 @@ function renderStratDetail(name) {
     const slot=`${String(h).padStart(2,'0')}:00`;
     if(!hourMap[slot])hourMap[slot]={w:0,t:0};
     hourMap[slot].t++;
-    if(t.result==='WIN')hourMap[slot].w++;
+    if (isWin(t))hourMap[slot].w++;
   });
 
   panel.innerHTML = `
@@ -2460,7 +2472,7 @@ function renderStratDetail(name) {
               <td>${slTp}</td>
               <td>${rrHtml}</td>
               <td>${pnlHtml}</td>
-              <td><span class="badge ${t.result==='WIN'?'badge-win':'badge-loss'}">${t.result}</span></td>
+              <td><span class="badge ${isWin(t)?'badge-win':'badge-loss'}">${tradeResult(t)}</span></td>
               <td style="color:var(--muted);">${t.session||'—'}</td>
               <td><div class="note-text">${t.note||'—'}</div></td>
             </tr>`;
@@ -2695,27 +2707,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
-        <!-- FIREBASE SETUP NOTICE -->
-        <div class="sync-banner show" id="firebase-notice" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);">
-          <span style="font-size:18px;">⚙️</span>
-          <div style="color:var(--warn);">
-            <strong>Firebase setup required for cloud sync.</strong>
-            To enable real sync: (1) Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent2);">console.firebase.google.com</a>,
-            create a project, enable <strong>Realtime Database</strong>, add a Web App, then
-            replace the <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">FIREBASE_CONFIG</code> values in this file's JS with your own.
-            Set DB rules to: <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">{".read":"auth==null","users/{u}":{"data":{"pinhash":{".write":"true"}}}}</code>
-            — or for quick dev use <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">".read":true,".write":true</code>.
-            <a href="#" onclick="document.getElementById('firebase-notice').style.display='none';return false;" style="color:var(--accent2);margin-left:8px;">Dismiss</a>
-          </div>
-        </div>
-          <span style="font-size:18px;">ℹ️</span>
-          <div>
-            <strong>Cross-device sync:</strong> Data is stored in your browser's localStorage — it is <strong>device & browser specific</strong>.
-            To sync between phone and computer, use <strong>Export CSV</strong> on one device and import on the other,
-            or host the file on a server with a shared backend.
-            <a href="#" onclick="document.getElementById('sync-banner').classList.remove('show');return false;" style="color:var(--accent2);margin-left:8px;text-decoration:none;">Dismiss</a>
-          </div>
-        </div>
         <div class="period-row">
           <span style="font-size:12px;color:var(--muted);margin-right:4px;">Period:</span>
           <button class="period-btn active" onclick="setPeriod('day', this)">Day</button>
