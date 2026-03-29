@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FX Journal — Trading Log</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230a0c10'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='20' font-family='Arial Black,sans-serif' fill='%2300e5a0'%3E📈%3C/text%3E%3C/svg%3E">
+<link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0c10'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='110' font-family='Arial' fill='%2300e5a0'%3E📈%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
@@ -533,6 +535,91 @@
   .strat-empty-icon { font-size: 48px; margin-bottom: 12px; }
   .strat-empty-title { font-size: 16px; font-weight: 600; margin-bottom: 6px; color: var(--text); }
 
+  /* PRICE NUMPAD POPUP */
+  .price-wrap { position: relative; }
+  .price-hint {
+    font-size: 10px; color: var(--muted); margin-top: 3px;
+    font-family: 'Roboto Mono'; letter-spacing: .3px;
+    display: flex; align-items: center; gap: 5px;
+  }
+  .price-hint .fmt-chip {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 4px; padding: 1px 6px; font-size: 10px;
+    color: var(--accent); font-weight: 600; letter-spacing: .5px;
+  }
+  .numpad-overlay {
+    display: none; position: fixed; inset: 0; z-index: 9000;
+    background: rgba(0,0,0,.5); backdrop-filter: blur(2px);
+    align-items: flex-end; justify-content: center;
+  }
+  .numpad-overlay.open { display: flex; }
+  .numpad-popup {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px 16px 0 0; width: 100%; max-width: 420px;
+    padding: 0 0 env(safe-area-inset-bottom,0);
+    box-shadow: 0 -8px 32px rgba(0,0,0,.4);
+    animation: slideUp .2s ease;
+  }
+  @keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+  .numpad-header {
+    padding: 14px 18px 10px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .numpad-field-label { font-size: 11px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+  .numpad-display {
+    font-family: 'Roboto Mono'; font-size: 28px; font-weight: 700;
+    color: var(--text); letter-spacing: 1px; min-height: 36px;
+    margin-top: 2px;
+  }
+  .numpad-format-hint { font-size: 11px; color: var(--muted); margin-top: 2px; font-family: 'Roboto Mono'; }
+  .numpad-close { background: none; border: none; color: var(--muted); font-size: 18px; cursor: pointer; padding: 4px 8px; border-radius: 6px; }
+  .numpad-close:hover { color: var(--text); }
+  .numpad-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1px; background: var(--border); margin: 0;
+  }
+  .numpad-btn {
+    background: var(--surface2); border: none; color: var(--text);
+    font-family: 'Roboto'; font-size: 20px; font-weight: 500;
+    padding: 18px 0; cursor: pointer; transition: background .1s;
+    text-align: center;
+  }
+  .numpad-btn:hover, .numpad-btn:active { background: var(--surface); }
+  .numpad-btn.zero { grid-column: span 1; }
+  .numpad-btn.dot { font-size: 22px; font-weight: 700; }
+  .numpad-btn.del { font-size: 18px; color: var(--muted); }
+  .numpad-btn.del:hover { color: var(--loss); }
+  .numpad-confirm {
+    background: var(--accent); color: #0a0c10; font-weight: 800;
+    font-size: 15px; font-family: 'Roboto'; border: none;
+    width: 100%; padding: 16px; cursor: pointer; transition: background .15s;
+  }
+  .numpad-confirm:hover { background: #00ffb3; }
+  /* quick-step buttons */
+  .numpad-steps {
+    display: flex; gap: 6px; padding: 8px 12px;
+    border-top: 1px solid var(--border); overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .numpad-steps::-webkit-scrollbar { display: none; }
+  .step-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--accent2); font-family: 'Roboto Mono';
+    font-size: 11px; font-weight: 600; padding: 5px 10px; cursor: pointer;
+    white-space: nowrap; flex-shrink: 0; transition: all .1s;
+  }
+  .step-btn:active { background: var(--accent2); color: #0a0c10; }
+
+  /* SYNC BANNER */
+  .sync-banner {
+    background: rgba(14,165,233,.12); border: 1px solid rgba(14,165,233,.3);
+    border-radius: 8px; padding: 10px 14px; margin-bottom: 16px;
+    font-size: 12px; color: var(--accent2); display: none;
+    align-items: flex-start; gap: 10px;
+  }
+  .sync-banner.show { display: flex; }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -704,6 +791,16 @@
 
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
+        <!-- SYNC INFO BANNER -->
+        <div class="sync-banner" id="sync-banner">
+          <span style="font-size:18px;">ℹ️</span>
+          <div>
+            <strong>Cross-device sync:</strong> Data is stored in your browser's localStorage — it is <strong>device & browser specific</strong>.
+            To sync between phone and computer, use <strong>Export CSV</strong> on one device and import on the other,
+            or host the file on a server with a shared backend.
+            <a href="#" onclick="document.getElementById('sync-banner').classList.remove('show');return false;" style="color:var(--accent2);margin-left:8px;text-decoration:none;">Dismiss</a>
+          </div>
+        </div>
         <div class="period-row">
           <span style="font-size:12px;color:var(--muted);margin-right:4px;">Period:</span>
           <button class="period-btn active" onclick="setPeriod('day', this)">Day</button>
@@ -877,6 +974,38 @@
   </main>
 </div>
 
+<!-- PRICE NUMPAD -->
+<div class="numpad-overlay" id="numpad-overlay" onclick="if(event.target===this)closeNumpad()">
+  <div class="numpad-popup">
+    <div class="numpad-header">
+      <div>
+        <div class="numpad-field-label" id="numpad-label">Entry Price</div>
+        <div class="numpad-display" id="numpad-display">—</div>
+        <div class="numpad-format-hint" id="numpad-fmt"></div>
+      </div>
+      <button class="numpad-close" onclick="closeNumpad()">✕</button>
+    </div>
+    <!-- quick ±step buttons -->
+    <div class="numpad-steps" id="numpad-steps"></div>
+    <!-- digit grid -->
+    <div class="numpad-grid">
+      <button class="numpad-btn" onclick="numpadKey('7')">7</button>
+      <button class="numpad-btn" onclick="numpadKey('8')">8</button>
+      <button class="numpad-btn" onclick="numpadKey('9')">9</button>
+      <button class="numpad-btn" onclick="numpadKey('4')">4</button>
+      <button class="numpad-btn" onclick="numpadKey('5')">5</button>
+      <button class="numpad-btn" onclick="numpadKey('6')">6</button>
+      <button class="numpad-btn" onclick="numpadKey('1')">1</button>
+      <button class="numpad-btn" onclick="numpadKey('2')">2</button>
+      <button class="numpad-btn" onclick="numpadKey('3')">3</button>
+      <button class="numpad-btn zero" onclick="numpadKey('0')">0</button>
+      <button class="numpad-btn dot" onclick="numpadKey('.')">.</button>
+      <button class="numpad-btn del" onclick="numpadKey('⌫')">⌫</button>
+    </div>
+    <button class="numpad-confirm" onclick="confirmNumpad()">✓ Confirm</button>
+  </div>
+</div>
+
 <!-- ADD TRADE MODAL -->
 <div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
   <div class="modal">
@@ -924,7 +1053,7 @@
         </div>
         <div class="form-group">
           <label class="form-label">Pair</label>
-          <select class="form-select" id="f-pair">
+          <select class="form-select" id="f-pair" onchange="updatePriceHints()">
             <optgroup label="Gold">
               <option>XAU/USD</option>
             </optgroup>
@@ -962,24 +1091,22 @@
           </div>
         </div>
         <div class="form-group">
-          <label class="form-label">Entry Price <span style="color:var(--muted);font-weight:400;font-size:10px;">— type or use ▲▼</span></label>
-          <div style="position:relative;">
-            <input type="text" inputmode="decimal" class="form-input" id="f-entry" placeholder="e.g. 3312.50" style="padding-right:32px;font-family:'Roboto Mono';" oninput="sanitizePriceInput(this)" onkeydown="priceKeydown(event,'f-entry')">
-            <div style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;">
-              <button type="button" onclick="nudgePrice('f-entry',1)" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 6px 0 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">▲</button>
-              <button type="button" onclick="nudgePrice('f-entry',-1)" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 0 6px 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">▼</button>
-            </div>
-          </div>
+          <label class="form-label">Entry Price</label>
+          <input type="text" inputmode="decimal" class="form-input" id="f-entry"
+            placeholder="" readonly
+            style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);"
+            onclick="openNumpad('f-entry','Entry Price')"
+            onkeydown="priceKeydown(event,'f-entry')">
+          <div class="price-hint" id="hint-entry"></div>
         </div>
         <div class="form-group">
-          <label class="form-label">Exit Price <span style="color:var(--muted);font-weight:400;font-size:10px;">— type or use ▲▼</span></label>
-          <div style="position:relative;">
-            <input type="text" inputmode="decimal" class="form-input" id="f-exit" placeholder="e.g. 3330.00" style="padding-right:32px;font-family:'Roboto Mono';" oninput="sanitizePriceInput(this)" onkeydown="priceKeydown(event,'f-exit')">
-            <div style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;">
-              <button type="button" onclick="nudgePrice('f-exit',1)" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 6px 0 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">▲</button>
-              <button type="button" onclick="nudgePrice('f-exit',-1)" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 0 6px 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--muted)'">▼</button>
-            </div>
-          </div>
+          <label class="form-label">Exit Price</label>
+          <input type="text" inputmode="decimal" class="form-input" id="f-exit"
+            placeholder="" readonly
+            style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);"
+            onclick="openNumpad('f-exit','Exit Price')"
+            onkeydown="priceKeydown(event,'f-exit')">
+          <div class="price-hint" id="hint-exit"></div>
         </div>
       </div>
 
@@ -1026,23 +1153,19 @@
         <div class="form-row-3" style="margin-bottom:10px;">
           <div class="form-group">
             <label class="form-label">Stop Loss</label>
-            <div style="position:relative;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-sl" placeholder="SL price" style="padding-right:32px;font-family:'Roboto Mono';" oninput="sanitizePriceInput(this);calcRR()" onkeydown="priceKeydown(event,'f-sl')">
-              <div style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;">
-                <button type="button" onclick="nudgePrice('f-sl',1);calcRR()" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 6px 0 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--loss)'" onmouseout="this.style.color='var(--muted)'">▲</button>
-                <button type="button" onclick="nudgePrice('f-sl',-1);calcRR()" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 0 6px 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--loss)'" onmouseout="this.style.color='var(--muted)'">▼</button>
-              </div>
-            </div>
+            <input type="text" inputmode="decimal" class="form-input" id="f-sl"
+              placeholder="" readonly
+              style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);border-color:rgba(244,63,94,.3);"
+              onclick="openNumpad('f-sl','Stop Loss')">
+            <div class="price-hint" id="hint-sl"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Take Profit</label>
-            <div style="position:relative;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-tp" placeholder="TP price" style="padding-right:32px;font-family:'Roboto Mono';" oninput="sanitizePriceInput(this);calcRR()" onkeydown="priceKeydown(event,'f-tp')">
-              <div style="position:absolute;right:0;top:0;bottom:0;display:flex;flex-direction:column;">
-                <button type="button" onclick="nudgePrice('f-tp',1);calcRR()" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 6px 0 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--win)'" onmouseout="this.style.color='var(--muted)'">▲</button>
-                <button type="button" onclick="nudgePrice('f-tp',-1);calcRR()" style="flex:1;background:var(--border);border:none;color:var(--muted);cursor:pointer;border-radius:0 0 6px 0;padding:0 7px;font-size:10px;" onmouseover="this.style.color='var(--win)'" onmouseout="this.style.color='var(--muted)'">▼</button>
-              </div>
-            </div>
+            <input type="text" inputmode="decimal" class="form-input" id="f-tp"
+              placeholder="" readonly
+              style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);border-color:rgba(34,197,94,.3);"
+              onclick="openNumpad('f-tp','Take Profit')">
+            <div class="price-hint" id="hint-tp"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Risk % of Capital</label>
@@ -1218,8 +1341,100 @@ document.addEventListener('click', function(e) {
 });
 
 // ===== PRICE INPUT HELPERS =====
+// ===== PAIR CONFIG (format + steps) =====
+function getPairConfig(pair) {
+  if (!pair) pair = 'XAU/USD';
+  if (pair.includes('XAU') || pair.includes('XAG')) {
+    return { format: 'XXXX.XX', example: '3312.50', decimals: 2, step: 1, steps: [0.1, 0.5, 1, 5, 10], label: 'Gold' };
+  }
+  if (pair.includes('JPY')) {
+    return { format: 'XXX.XXX', example: '154.320', decimals: 3, step: 0.01, steps: [0.01, 0.05, 0.1, 0.5, 1], label: 'JPY pair' };
+  }
+  // standard forex
+  return { format: 'X.XXXXX', example: '1.08250', decimals: 5, step: 0.0001, steps: [0.0001, 0.001, 0.01, 0.1], label: 'Forex pair' };
+}
+
+function updatePriceHints() {
+  const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+  const cfg = getPairConfig(pair);
+  ['entry','exit','sl','tp'].forEach(id => {
+    const hint = document.getElementById('hint-' + id);
+    const inp  = document.getElementById('f-' + id);
+    if (hint) hint.innerHTML = `<span class="fmt-chip">${cfg.format}</span> e.g. ${cfg.example} — tap to open numpad`;
+    if (inp && !inp.value) inp.placeholder = cfg.example;
+  });
+}
+
+// ===== NUMPAD =====
+let numpadTargetId = '';
+let numpadValue = '';
+let numpadLabel = '';
+
+function openNumpad(fieldId, label) {
+  numpadTargetId = fieldId;
+  numpadLabel = label;
+  const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+  const cfg = getPairConfig(pair);
+  const cur = document.getElementById(fieldId)?.value || '';
+  numpadValue = cur.replace(/[^0-9.]/g, '');
+
+  document.getElementById('numpad-label').textContent = label;
+  document.getElementById('numpad-fmt').textContent = `Format: ${cfg.format}  (${cfg.label})  e.g. ${cfg.example}`;
+  refreshNumpadDisplay();
+
+  // Quick step buttons
+  const stepsEl = document.getElementById('numpad-steps');
+  stepsEl.innerHTML = cfg.steps.map(s =>
+    `<button class="step-btn" onclick="numpadStep(${s})">+${s}</button>` +
+    `<button class="step-btn" onclick="numpadStep(${-s})" style="color:var(--loss);">-${s}</button>`
+  ).join('');
+
+  document.getElementById('numpad-overlay').classList.add('open');
+}
+
+function closeNumpad() {
+  document.getElementById('numpad-overlay').classList.remove('open');
+}
+
+function numpadKey(k) {
+  if (k === '⌫') {
+    numpadValue = numpadValue.slice(0, -1);
+  } else if (k === '.') {
+    if (!numpadValue.includes('.')) numpadValue += '.';
+  } else {
+    const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+    const cfg = getPairConfig(pair);
+    // enforce decimal places limit
+    const parts = numpadValue.split('.');
+    if (parts.length === 2 && parts[1].length >= cfg.decimals) return;
+    numpadValue += k;
+  }
+  refreshNumpadDisplay();
+}
+
+function numpadStep(s) {
+  const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+  const cfg = getPairConfig(pair);
+  let val = parseFloat(numpadValue) || 0;
+  val = Math.round((val + s) * 1e6) / 1e6;
+  if (val < 0) val = 0;
+  numpadValue = val.toFixed(cfg.decimals);
+  refreshNumpadDisplay();
+}
+
+function refreshNumpadDisplay() {
+  const disp = document.getElementById('numpad-display');
+  disp.textContent = numpadValue || '—';
+}
+
+function confirmNumpad() {
+  const el = document.getElementById(numpadTargetId);
+  if (el) el.value = numpadValue;
+  closeNumpad();
+  calcRR();
+}
+
 function sanitizePriceInput(el) {
-  // Allow digits, one dot, one comma→dot
   let v = el.value.replace(/,/g, '.').replace(/[^0-9.]/g, '');
   const parts = v.split('.');
   if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
@@ -1227,15 +1442,12 @@ function sanitizePriceInput(el) {
 }
 
 function nudgePrice(id, dir) {
+  const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+  const cfg = getPairConfig(pair);
   const el = document.getElementById(id);
-  const pair = document.getElementById('f-pair').value;
-  // Step: XAU/USD = 0.1, JPY pairs = 0.01, others = 0.0001
-  let step = 0.0001;
-  if (pair.includes('XAU') || pair.includes('XAG')) step = 0.1;
-  else if (pair.includes('JPY')) step = 0.01;
   let val = parseFloat(el.value) || 0;
-  val = Math.round((val + dir * step) * 100000) / 100000;
-  el.value = val > 0 ? val : 0;
+  val = Math.round((val + dir * cfg.step) * 1e6) / 1e6;
+  el.value = val > 0 ? val.toFixed(cfg.decimals) : '';
 }
 
 function priceKeydown(e, id) {
@@ -2031,6 +2243,7 @@ function openModal() {
   document.getElementById('dp-min').value = String(now.getMinutes()).padStart(2,'0');
   updateDateValue();
   document.getElementById('f-pair').value = 'XAU/USD';
+  updatePriceHints();
   document.getElementById('f-entry').value = '';
   document.getElementById('f-exit').value = '';
   document.getElementById('f-lot').value = '';
@@ -2061,6 +2274,7 @@ function editTrade(idx) {
     updateDateValue();
   }
   document.getElementById('f-pair').value = t.pair || 'XAU/USD';
+  updatePriceHints();
   document.getElementById('f-entry').value = t.entry || '';
   document.getElementById('f-exit').value = t.exit || '';
   document.getElementById('f-lot').value = t.lot || '';
@@ -2569,9 +2783,17 @@ function calcRR() {
 window.addEventListener('DOMContentLoaded', () => {
   applyTheme();
   populateStrategySelect();
+  updatePriceHints();
   const inp = document.getElementById('capital-input');
   if (inp && initialCapital) inp.value = initialCapital;
   renderCapitalReturn();
+  // Show sync info banner once
+  if (!localStorage.getItem('fxj_sync_dismissed')) {
+    document.getElementById('sync-banner')?.classList.add('show');
+  }
+  document.querySelector('[href="#"]')?.addEventListener('click', () => {
+    localStorage.setItem('fxj_sync_dismissed','1');
+  });
 });
 renderDashboard();
 renderTradeTable();
