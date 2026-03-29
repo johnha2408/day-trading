@@ -695,34 +695,102 @@
   }
   .user-chip:hover { border-color: var(--accent); }
 
-  /* CUSTOM DATE RANGE PICKER */
-  .daterange-wrap {
-    display: inline-flex; align-items: center; gap: 0;
+  /* ===== CUSTOM DATE RANGE PICKER ===== */
+  .dr-btn {
+    display: inline-flex; align-items: center; gap: 7px;
     background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 7px; overflow: hidden; height: 30px;
-    transition: border-color .15s;
+    border-radius: 7px; padding: 5px 12px; cursor: pointer;
+    font-family: 'Roboto'; font-size: 12px; font-weight: 500; color: var(--muted);
+    transition: all .15s; white-space: nowrap; height: 30px;
   }
-  .daterange-wrap:focus-within { border-color: var(--accent); }
-  .daterange-wrap input[type=date] {
-    background: transparent; border: none; outline: none;
-    color: var(--text); font-family: 'Roboto', sans-serif;
-    font-size: 12px; font-weight: 500; padding: 0 8px;
-    cursor: pointer; height: 100%;
-    color-scheme: dark;
+  .dr-btn:hover { border-color: var(--accent); color: var(--text); }
+  .dr-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(0,229,160,.08); }
+  .dr-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+
+  .dr-popup {
+    position: absolute; z-index: 8000;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; box-shadow: 0 12px 40px rgba(0,0,0,.5);
+    padding: 16px; width: 580px; max-width: 95vw;
+    display: none; flex-direction: column; gap: 12px;
+    top: calc(100% + 6px); left: 0;
   }
-  body.light .daterange-wrap input[type=date] { color-scheme: light; }
-  .daterange-sep { color: var(--muted); font-size: 12px; padding: 0 2px; line-height: 30px; }
-  .daterange-apply {
-    background: var(--accent); border: none; color: #0a0c10;
-    font-family: 'Roboto'; font-size: 11px; font-weight: 700;
-    padding: 0 10px; cursor: pointer; height: 100%;
+  .dr-popup.open { display: flex; }
+  .dr-calendars { display: flex; gap: 16px; flex-wrap: wrap; }
+  .dr-cal { flex: 1; min-width: 220px; }
+  .dr-cal-header {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 10px;
+  }
+  .dr-cal-title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .dr-cal-nav {
+    background: none; border: none; color: var(--muted); cursor: pointer;
+    font-size: 16px; padding: 2px 6px; border-radius: 5px; line-height: 1;
+    transition: color .1s;
+  }
+  .dr-cal-nav:hover { color: var(--accent); }
+  .dr-cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 1px; }
+  .dr-cal-dow {
+    text-align: center; font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    color: var(--muted); padding: 4px 0; text-transform: uppercase;
+  }
+  .dr-day {
+    text-align: center; font-size: 12px; padding: 6px 0;
+    border-radius: 5px; cursor: pointer; color: var(--text);
+    transition: background .1s, color .1s; user-select: none;
+  }
+  .dr-day:hover { background: var(--surface2); color: var(--accent); }
+  .dr-day.empty { cursor: default; }
+  .dr-day.other-month { color: var(--border); cursor: default; }
+  .dr-day.in-range { background: rgba(0,229,160,.12); border-radius: 0; }
+  .dr-day.range-start, .dr-day.range-end {
+    background: var(--accent); color: #0a0c10; font-weight: 700;
+  }
+  .dr-day.range-start { border-radius: 5px 0 0 5px; }
+  .dr-day.range-end   { border-radius: 0 5px 5px 0; }
+  .dr-day.range-start.range-end { border-radius: 5px; }
+  .dr-day.today { font-weight: 700; color: var(--accent2); }
+  .dr-day.today.range-start, .dr-day.today.range-end { color: #0a0c10; }
+
+  .dr-footer {
+    display: flex; align-items: center; justify-content: space-between;
+    flex-wrap: wrap; gap: 8px;
+    padding-top: 10px; border-top: 1px solid var(--border);
+  }
+  .dr-presets { display: flex; gap: 6px; flex-wrap: wrap; }
+  .dr-preset {
+    font-size: 11px; font-weight: 600; padding: 4px 10px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; cursor: pointer; color: var(--muted);
+    font-family: 'Roboto'; transition: all .1s;
+  }
+  .dr-preset:hover { border-color: var(--accent2); color: var(--accent2); }
+  .dr-display {
+    font-size: 11px; color: var(--muted); font-family: 'Roboto Mono';
+    background: var(--surface2); border-radius: 5px; padding: 4px 10px;
+  }
+  .dr-display span { color: var(--accent); font-weight: 600; }
+  .dr-actions { display: flex; gap: 8px; }
+  .dr-clear {
+    font-size: 12px; font-weight: 500; padding: 6px 14px;
+    background: transparent; border: 1px solid var(--border);
+    border-radius: 6px; cursor: pointer; color: var(--muted);
+    font-family: 'Roboto'; transition: all .15s;
+  }
+  .dr-clear:hover { color: var(--loss); border-color: var(--loss); }
+  .dr-apply {
+    font-size: 12px; font-weight: 700; padding: 6px 18px;
+    background: var(--accent); border: none; border-radius: 6px;
+    cursor: pointer; color: #0a0c10; font-family: 'Roboto';
     transition: background .15s;
   }
-  .daterange-apply:hover { background: #00ffb3; }
+  .dr-apply:hover { background: #00ffb3; }
+
   .period-label-custom {
     font-size: 11px; color: var(--accent); font-weight: 600;
     background: rgba(0,229,160,.1); border: 1px solid rgba(0,229,160,.25);
     border-radius: 5px; padding: 2px 8px; white-space: nowrap;
+    display: none;
   }
 
   ::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -1740,30 +1808,230 @@ function setPeriod(p, el) {
   renderDashboard();
 }
 
-function applyCustomRange() {
-  const fromEl = document.getElementById('range-from');
-  const toEl   = document.getElementById('range-to');
-  if (!fromEl?.value && !toEl?.value) return;
+// ===== CUSTOM DATE RANGE PICKER =====
+const DR_MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DR_MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const DR_DAYS = ['Su','Mo','Tu','We','Th','Fr','Sa'];
 
-  const from = fromEl?.value ? new Date(fromEl.value + 'T00:00:00') : null;
-  const to   = toEl?.value   ? new Date(toEl.value   + 'T23:59:59') : null;
+let drOpen = false;
+let drSelecting = 'from'; // 'from' | 'to'
+let drFrom = null;  // Date
+let drTo   = null;  // Date
+let drHover = null; // Date (for hover highlight)
+let drLeftYear, drLeftMonth;   // left calendar view
+let drRightYear, drRightMonth; // right calendar view
 
-  // If only one date set, use it for both ends
-  customRangeFrom = from || to;
-  customRangeTo   = to   || from;
+function initDrCalendars() {
+  const now = new Date();
+  drLeftYear  = now.getFullYear();
+  drLeftMonth = now.getMonth() - 1;
+  if (drLeftMonth < 0) { drLeftMonth = 11; drLeftYear--; }
+  drRightYear  = now.getFullYear();
+  drRightMonth = now.getMonth();
+}
 
-  currentPeriod = 'custom';
-  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-
-  // Show label
-  const lbl = document.getElementById('custom-range-label');
-  if (lbl) {
-    const fmtD = d => d ? d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }) : '?';
-    lbl.textContent = fmtD(customRangeFrom) + ' – ' + fmtD(customRangeTo);
-    lbl.style.display = 'inline-flex';
+function toggleDrPicker() {
+  drOpen = !drOpen;
+  const popup = document.getElementById('dr-popup');
+  const btn   = document.getElementById('dr-btn');
+  popup.classList.toggle('open', drOpen);
+  btn.classList.toggle('active', drOpen);
+  if (drOpen) {
+    initDrCalendars();
+    renderDrCals();
+    // Close on outside click
+    setTimeout(() => {
+      document.addEventListener('click', drOutsideClose, { once: true });
+    }, 10);
   }
+}
+
+function drOutsideClose(e) {
+  const container = document.getElementById('dr-container');
+  if (container && !container.contains(e.target)) {
+    drOpen = false;
+    document.getElementById('dr-popup').classList.remove('open');
+    document.getElementById('dr-btn').classList.remove('active');
+  } else if (drOpen) {
+    document.addEventListener('click', drOutsideClose, { once: true });
+  }
+}
+
+function drNavLeft(dir) {
+  drLeftMonth += dir;
+  if (drLeftMonth > 11) { drLeftMonth = 0; drLeftYear++; }
+  if (drLeftMonth < 0)  { drLeftMonth = 11; drLeftYear--; }
+  // Keep right always 1 month ahead of left
+  drRightMonth = drLeftMonth + 1;
+  drRightYear  = drLeftYear;
+  if (drRightMonth > 11) { drRightMonth = 0; drRightYear++; }
+  renderDrCals();
+}
+
+function drNavRight(dir) {
+  drRightMonth += dir;
+  if (drRightMonth > 11) { drRightMonth = 0; drRightYear++; }
+  if (drRightMonth < 0)  { drRightMonth = 11; drRightYear--; }
+  drLeftMonth = drRightMonth - 1;
+  drLeftYear  = drRightYear;
+  if (drLeftMonth < 0) { drLeftMonth = 11; drLeftYear--; }
+  renderDrCals();
+}
+
+function renderDrCals() {
+  document.getElementById('dr-cal-left').innerHTML  = buildDrCal(drLeftYear,  drLeftMonth,  'L');
+  document.getElementById('dr-cal-right').innerHTML = buildDrCal(drRightYear, drRightMonth, 'R');
+  updateDrDisplay();
+}
+
+function buildDrCal(year, month, side) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const firstDow = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const prevDays = new Date(year, month, 0).getDate();
+  const navPrev = side === 'L' ? "drNavLeft(-1)" : "drNavRight(-1)";
+  const navNext = side === 'L' ? "drNavLeft(1)"  : "drNavRight(1)";
+
+  let html = `<div class="dr-cal-header">
+    <button class="dr-cal-nav" onclick="${navPrev}">‹</button>
+    <div class="dr-cal-title">${DR_MONTHS[month]} ${year}</div>
+    <button class="dr-cal-nav" onclick="${navNext}">›</button>
+  </div>
+  <div class="dr-cal-grid">`;
+
+  DR_DAYS.forEach(d => { html += `<div class="dr-cal-dow">${d}</div>`; });
+
+  // Prev month days
+  for (let i = firstDow - 1; i >= 0; i--) {
+    html += `<div class="dr-day other-month">${prevDays - i}</div>`;
+  }
+
+  // Current month days
+  for (let d = 1; d <= daysInMonth; d++) {
+    const date = new Date(year, month, d);
+    const dts  = date.getTime();
+    let cls = 'dr-day';
+
+    const isToday = date.toDateString() === today.toDateString();
+    if (isToday) cls += ' today';
+
+    // Range highlight
+    const fromTs = drFrom ? drFrom.getTime() : null;
+    const toTs   = drTo   ? drTo.getTime()   : null;
+    const hoverTs = drHover ? drHover.getTime() : null;
+
+    // End of range (for hover preview when selecting 'to')
+    const effectiveTo = toTs ?? (drSelecting === 'to' && hoverTs ? hoverTs : null);
+
+    if (fromTs && dts === fromTs) cls += ' range-start';
+    if (effectiveTo && dts === effectiveTo) cls += ' range-end';
+    if (fromTs && effectiveTo && dts > fromTs && dts < effectiveTo) cls += ' in-range';
+
+    html += `<div class="${cls}" 
+      onclick="drSelectDay(${year},${month},${d})"
+      onmouseover="drHoverDay(${year},${month},${d})"
+      onmouseout="drHoverDay(0,0,0)"
+    >${d}</div>`;
+  }
+
+  // Next month fill
+  const totalCells = firstDow + daysInMonth;
+  const remaining = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+  for (let i = 1; i <= remaining; i++) {
+    html += `<div class="dr-day other-month">${i}</div>`;
+  }
+
+  html += '</div>';
+  return html;
+}
+
+function drSelectDay(y, m, d) {
+  const date = new Date(y, m, d);
+  if (drSelecting === 'from' || (!drFrom && !drTo)) {
+    drFrom = date; drTo = null; drSelecting = 'to';
+  } else {
+    if (date < drFrom) { drTo = drFrom; drFrom = date; }
+    else drTo = date;
+    drSelecting = 'from';
+  }
+  drHover = null;
+  renderDrCals();
+}
+
+function drHoverDay(y, m, d) {
+  drHover = (y && drSelecting === 'to' && drFrom) ? new Date(y, m, d) : null;
+  renderDrCals();
+}
+
+function updateDrDisplay() {
+  const el = document.getElementById('dr-display');
+  if (!el) return;
+  const fmt = d => d ? `${DR_MONTHS_SHORT[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}` : '—';
+  if (!drFrom && !drTo) { el.innerHTML = '<span style="color:var(--muted)">Select start date</span>'; return; }
+  if (drFrom && !drTo)  { el.innerHTML = `<span>${fmt(drFrom)}</span> → <span style="color:var(--muted)">Select end date</span>`; return; }
+  el.innerHTML = `<span>${fmt(drFrom)}</span> → <span>${fmt(drTo)}</span>`;
+}
+
+function drPreset(key) {
+  const now = new Date(); now.setHours(0,0,0,0);
+  const yst = new Date(now); yst.setDate(now.getDate()-1);
+  const presets = {
+    today:     [new Date(now), new Date(now)],
+    yesterday: [new Date(yst), new Date(yst)],
+    '7d':      [new Date(now.getFullYear(), now.getMonth(), now.getDate()-6), new Date(now)],
+    '30d':     [new Date(now.getFullYear(), now.getMonth(), now.getDate()-29), new Date(now)],
+    thisMonth: [new Date(now.getFullYear(), now.getMonth(), 1), new Date(now)],
+    lastMonth: [new Date(now.getFullYear(), now.getMonth()-1, 1), new Date(now.getFullYear(), now.getMonth(), 0)],
+    thisYear:  [new Date(now.getFullYear(), 0, 1), new Date(now)],
+  };
+  [drFrom, drTo] = presets[key];
+  drSelecting = 'from';
+  drHover = null;
+  // Sync calendars to show drFrom month
+  drLeftMonth = drFrom.getMonth(); drLeftYear = drFrom.getFullYear();
+  drRightMonth = drLeftMonth + 1; drRightYear = drLeftYear;
+  if (drRightMonth > 11) { drRightMonth = 0; drRightYear++; }
+  renderDrCals();
+}
+
+function drClear() {
+  drFrom = null; drTo = null; drSelecting = 'from'; drHover = null;
+  customRangeFrom = null; customRangeTo = null;
+  document.getElementById('custom-range-label').style.display = 'none';
+  document.getElementById('dr-btn-label').textContent = 'Custom Range';
+  document.getElementById('dr-btn').classList.remove('active');
+  currentPeriod = 'day';
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pbtn-day')?.classList.add('active');
+  renderDrCals();
   renderDashboard();
 }
+
+function drApply() {
+  if (!drFrom) return;
+  const to = drTo || drFrom;
+  customRangeFrom = new Date(drFrom); customRangeFrom.setHours(0,0,0,0);
+  customRangeTo   = new Date(to);   customRangeTo.setHours(23,59,59,999);
+  currentPeriod   = 'custom';
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+
+  const fmt = d => `${DR_MONTHS_SHORT[d.getMonth()]} ${d.getDate()}`;
+  const sameDay = customRangeFrom.toDateString() === customRangeTo.toDateString();
+  const labelText = sameDay ? fmt(customRangeFrom) : `${fmt(customRangeFrom)} – ${fmt(customRangeTo)}`;
+
+  const btnLabel = document.getElementById('dr-btn-label');
+  if (btnLabel) btnLabel.textContent = labelText;
+
+  const lbl = document.getElementById('custom-range-label');
+  if (lbl) { lbl.textContent = labelText; lbl.style.display = 'inline-flex'; }
+
+  drOpen = false;
+  document.getElementById('dr-popup').classList.remove('open');
+  document.getElementById('dr-btn').classList.add('active');
+  renderDashboard();
+}
+
+function applyCustomRange() { drApply(); } // backward compat alias
 
 function filterByPeriod(tradeList) {
   const now = new Date();
@@ -2676,20 +2944,6 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-username')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-pin')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
-  // Init date range inputs: default from = start of month, to = today
-  const today = new Date();
-  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
-  const toISO   = today.toISOString().slice(0,10);
-  const fromISO = firstOfMonth.toISOString().slice(0,10);
-  const fromEl = document.getElementById('range-from');
-  const toEl   = document.getElementById('range-to');
-  if (fromEl) fromEl.value = fromISO;
-  if (toEl)   toEl.value   = toISO;
-
-  // Enter key on date inputs applies range
-  fromEl?.addEventListener('keydown', e => { if (e.key === 'Enter') applyCustomRange(); });
-  toEl?.addEventListener('keydown',   e => { if (e.key === 'Enter') applyCustomRange(); });
-
   // Don't auto-load data — wait for login
 });
 // Don't call renderDashboard/renderTradeTable at startup — called after login
@@ -2797,14 +3051,44 @@ window.addEventListener('DOMContentLoaded', () => {
           <button class="period-btn"        id="pbtn-week"  onclick="setPeriod('week',  this)">Week</button>
           <button class="period-btn"        id="pbtn-month" onclick="setPeriod('month', this)">Month</button>
           <button class="period-btn"        id="pbtn-all"   onclick="setPeriod('all',   this)">All Time</button>
-          <!-- Custom range -->
-          <div class="daterange-wrap" title="Custom date range">
-            <input type="date" id="range-from" title="From">
-            <span class="daterange-sep">→</span>
-            <input type="date" id="range-to" title="To">
-            <button class="daterange-apply" onclick="applyCustomRange()">Go</button>
+          <!-- Custom date range picker -->
+          <div style="position:relative;" id="dr-container">
+            <button class="dr-btn" id="dr-btn" onclick="toggleDrPicker()">
+              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+                <rect x="1" y="3" width="14" height="12" rx="2"/>
+                <path d="M1 7h14M5 1v4M11 1v4"/>
+              </svg>
+              <span id="dr-btn-label">Custom Range</span>
+            </button>
+
+            <div class="dr-popup" id="dr-popup">
+              <!-- Two month calendars side by side -->
+              <div class="dr-calendars">
+                <div class="dr-cal" id="dr-cal-left"></div>
+                <div class="dr-cal" id="dr-cal-right"></div>
+              </div>
+
+              <div class="dr-footer">
+                <div class="dr-presets">
+                  <button class="dr-preset" onclick="drPreset('today')">Today</button>
+                  <button class="dr-preset" onclick="drPreset('yesterday')">Yesterday</button>
+                  <button class="dr-preset" onclick="drPreset('7d')">Last 7 days</button>
+                  <button class="dr-preset" onclick="drPreset('30d')">Last 30 days</button>
+                  <button class="dr-preset" onclick="drPreset('thisMonth')">This month</button>
+                  <button class="dr-preset" onclick="drPreset('lastMonth')">Last month</button>
+                  <button class="dr-preset" onclick="drPreset('thisYear')">This year</button>
+                </div>
+                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                  <div class="dr-display" id="dr-display">Select dates</div>
+                  <div class="dr-actions">
+                    <button class="dr-clear" onclick="drClear()">Clear</button>
+                    <button class="dr-apply" onclick="drApply()">Apply →</button>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
-          <span id="custom-range-label" class="period-label-custom" style="display:none;"></span>
+          <span id="custom-range-label" class="period-label-custom"></span>
         </div>
 
         <div class="kpi-row" id="kpi-row"></div>
