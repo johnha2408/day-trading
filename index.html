@@ -1216,20 +1216,28 @@
         </div>
         <div class="form-group">
           <label class="form-label">Entry Price</label>
-          <input type="text" inputmode="decimal" class="form-input" id="f-entry"
-            placeholder="" readonly
-            style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);"
-            onclick="openNumpad('f-entry','Entry Price')"
-            onkeydown="priceKeydown(event,'f-entry')">
+          <div style="position:relative;display:flex;gap:0;">
+            <input type="text" inputmode="decimal" class="form-input" id="f-entry"
+              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
+              oninput="sanitizePriceInput(this);calcRR()"
+              onkeydown="priceKeydown(event,'f-entry')">
+            <button type="button" onclick="openNumpad('f-entry','Entry Price')"
+              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
+              title="Open numpad">⌨</button>
+          </div>
           <div class="price-hint" id="hint-entry"></div>
         </div>
         <div class="form-group">
           <label class="form-label">Exit Price</label>
-          <input type="text" inputmode="decimal" class="form-input" id="f-exit"
-            placeholder="" readonly
-            style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);"
-            onclick="openNumpad('f-exit','Exit Price')"
-            onkeydown="priceKeydown(event,'f-exit')">
+          <div style="position:relative;display:flex;gap:0;">
+            <input type="text" inputmode="decimal" class="form-input" id="f-exit"
+              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
+              oninput="sanitizePriceInput(this);calcRR()"
+              onkeydown="priceKeydown(event,'f-exit')">
+            <button type="button" onclick="openNumpad('f-exit','Exit Price')"
+              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
+              title="Open numpad">⌨</button>
+          </div>
           <div class="price-hint" id="hint-exit"></div>
         </div>
       </div>
@@ -1277,18 +1285,28 @@
         <div class="form-row-3" style="margin-bottom:10px;">
           <div class="form-group">
             <label class="form-label">Stop Loss</label>
-            <input type="text" inputmode="decimal" class="form-input" id="f-sl"
-              placeholder="" readonly
-              style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);border-color:rgba(244,63,94,.3);"
-              onclick="openNumpad('f-sl','Stop Loss')">
+            <div style="display:flex;gap:0;">
+              <input type="text" inputmode="decimal" class="form-input" id="f-sl"
+                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(244,63,94,.3);"
+                oninput="sanitizePriceInput(this);calcRR()"
+                onkeydown="priceKeydown(event,'f-sl')">
+              <button type="button" onclick="openNumpad('f-sl','Stop Loss')"
+                style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--loss);cursor:pointer;font-size:14px;flex-shrink:0;"
+                title="Open numpad">⌨</button>
+            </div>
             <div class="price-hint" id="hint-sl"></div>
           </div>
           <div class="form-group">
             <label class="form-label">Take Profit</label>
-            <input type="text" inputmode="decimal" class="form-input" id="f-tp"
-              placeholder="" readonly
-              style="font-family:'Roboto Mono';cursor:pointer;background:var(--surface2);border-color:rgba(34,197,94,.3);"
-              onclick="openNumpad('f-tp','Take Profit')">
+            <div style="display:flex;gap:0;">
+              <input type="text" inputmode="decimal" class="form-input" id="f-tp"
+                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(34,197,94,.3);"
+                oninput="sanitizePriceInput(this);calcRR()"
+                onkeydown="priceKeydown(event,'f-tp')">
+              <button type="button" onclick="openNumpad('f-tp','Take Profit')"
+                style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--win);cursor:pointer;font-size:14px;flex-shrink:0;"
+                title="Open numpad">⌨</button>
+            </div>
             <div class="price-hint" id="hint-tp"></div>
           </div>
           <div class="form-group">
@@ -1697,14 +1715,16 @@ document.addEventListener('click', function(e) {
 // ===== PAIR CONFIG (format + steps) =====
 function getPairConfig(pair) {
   if (!pair) pair = 'XAU/USD';
+  // Gold & Silver — format XXXX.XXX (3 decimals), 1 pip = 0.01
   if (pair.includes('XAU') || pair.includes('XAG')) {
-    return { format: 'XXXX.XX', example: '3312.50', decimals: 2, step: 1, steps: [0.1, 0.5, 1, 5, 10], label: 'Gold' };
+    return { format: 'XXXX.XXX', example: '3312.500', decimals: 3, step: 0.01, steps: [0.01, 0.1, 0.5, 1, 5, 10], label: 'Gold — 1 pip = 0.01' };
   }
+  // JPY pairs — format XXX.XXX (3 decimals), 1 pip = 0.01
   if (pair.includes('JPY')) {
-    return { format: 'XXX.XXX', example: '154.320', decimals: 3, step: 0.01, steps: [0.01, 0.05, 0.1, 0.5, 1], label: 'JPY pair' };
+    return { format: 'XXX.XXX', example: '154.320', decimals: 3, step: 0.01, steps: [0.01, 0.05, 0.1, 0.5, 1], label: 'JPY — 1 pip = 0.01' };
   }
-  // standard forex
-  return { format: 'X.XXXXX', example: '1.08250', decimals: 5, step: 0.0001, steps: [0.0001, 0.001, 0.01, 0.1], label: 'Forex pair' };
+  // Standard forex — format X.XXXXX (5 decimals), 1 pip = 0.0001
+  return { format: 'X.XXXXX', example: '1.08250', decimals: 5, step: 0.0001, steps: [0.0001, 0.0005, 0.001, 0.01], label: 'Forex — 1 pip = 0.0001' };
 }
 
 function updatePriceHints() {
@@ -1782,9 +1802,11 @@ function refreshNumpadDisplay() {
 
 function confirmNumpad() {
   const el = document.getElementById(numpadTargetId);
-  if (el) el.value = numpadValue;
+  if (el) {
+    el.value = numpadValue;
+    el.dispatchEvent(new Event('input')); // trigger oninput handlers (sanitize + calcRR)
+  }
   closeNumpad();
-  calcRR();
 }
 
 function sanitizePriceInput(el) {
@@ -2665,6 +2687,16 @@ function setResult(r) {
 }
 
 function saveTrade() {
+  const pnlRaw = parseFloat(document.getElementById('f-pnl').value);
+  const pnlVal = isNaN(pnlRaw) ? null : pnlRaw;
+
+  // Auto-correct result based on PnL sign — PnL is ground truth
+  let result = currentResult;
+  if (pnlVal !== null) {
+    result = pnlVal >= 0 ? 'WIN' : 'LOSS';
+    setResult(result); // sync toggle UI
+  }
+
   const trade = {
     date: document.getElementById('f-date').value,
     pair: document.getElementById('f-pair').value,
@@ -2675,8 +2707,8 @@ function saveTrade() {
     tp: parseFloat(document.getElementById('f-tp').value) || null,
     riskPct: parseFloat(document.getElementById('f-risk-pct').value) || null,
     lot: parseFloat(document.getElementById('f-lot').value) || null,
-    pnl: parseFloat(document.getElementById('f-pnl').value) || null,
-    result: currentResult,
+    pnl: pnlVal,
+    result,
     strategy: document.getElementById('f-strategy').value,
     session: document.getElementById('f-session').value,
     note: document.getElementById('f-note').value,
@@ -2691,7 +2723,6 @@ function saveTrade() {
   renderDashboard();
   renderTradeTable();
   renderCapitalReturn();
-  // refresh strategy page if open
   if (document.getElementById('page-strategy')?.classList.contains('active')) {
     renderStratList();
     if (activeStrategyName) renderStratDetail(activeStrategyName);
@@ -2821,7 +2852,7 @@ function renderStratList() {
         <div class="strat-card-name">${name}</div>
         <div class="strat-card-meta">
           ${total} trade${total!==1?'s':''} 
-          ${pnl!==0?'· <span style="color:'+(pnl>0?'var(--win)':'var(--loss)')+';">'+(pnl>0?'+':'')+'$'+Math.abs(pnl).toFixed(0)+'</span>':''}
+          ${pnl!==0?`· <span style="color:${pnl>0?'var(--win)':'var(--loss)'};">${pnl>0?'+':'-'}$${Math.abs(pnl).toFixed(0)}</span>`:''}
         </div>
       </div>
       <span class="strat-card-wr" style="background:${wrBg};color:${wrColor};">
@@ -2910,7 +2941,7 @@ function renderStratDetail(name) {
     <div class="strat-kpi-row">
       <div class="strat-kpi">
         <div class="strat-kpi-label">Total P&L</div>
-        <div class="strat-kpi-val" style="color:${pnlColor}">${pnl>=0?'+':''}$${Math.abs(pnl).toFixed(2)}</div>
+        <div class="strat-kpi-val" style="color:${pnlColor}">${pnl>=0?'+':'-'}$${Math.abs(pnl).toFixed(2)}</div>
       </div>
       <div class="strat-kpi">
         <div class="strat-kpi-label">Win Rate</div>
@@ -2919,7 +2950,7 @@ function renderStratDetail(name) {
       </div>
       <div class="strat-kpi">
         <div class="strat-kpi-label">Avg P&L / Trade</div>
-        <div class="strat-kpi-val" style="color:${parseFloat(avgPnl)>=0?'var(--win)':'var(--loss)'}">${parseFloat(avgPnl)>=0?'+':''}$${Math.abs(parseFloat(avgPnl)).toFixed(2)}</div>
+        <div class="strat-kpi-val" style="color:${parseFloat(avgPnl)>=0?'var(--win)':'var(--loss)'}">${parseFloat(avgPnl)>=0?'+':'-'}$${Math.abs(parseFloat(avgPnl)).toFixed(2)}</div>
       </div>
       <div class="strat-kpi">
         <div class="strat-kpi-label">Profit Factor</div>
@@ -3112,34 +3143,3 @@ function calcRR() {
   const rr        = (rewardPts && riskPts) ? rewardPts / riskPts : null;
 
   // Dollar risk using capital + risk%
-  let dollarRisk = '—';
-  if (riskPct && initialCapital) {
-    dollarRisk = '$' + ((initialCapital * riskPct / 100)).toFixed(2);
-  }
-
-  const rrClass = rr === null ? '' : rr >= 2 ? 'good' : rr >= 1 ? 'warn' : 'bad';
-  document.getElementById('rr-ratio').innerHTML     = rr !== null
-    ? `<span class="rr-badge ${rr>=2?'rr-good':rr>=1?'rr-mid':'rr-bad'}">1:${rr.toFixed(2)}</span>` : '—';
-  document.getElementById('rr-risk-pts').innerHTML  = `<span class="risk-calc-val bad">${riskPts.toFixed(2)}</span>`;
-  document.getElementById('rr-reward-pts').innerHTML= rewardPts !== null
-    ? `<span class="risk-calc-val good">${rewardPts.toFixed(2)}</span>` : '—';
-  document.getElementById('rr-dollar-risk').innerHTML = `<span class="risk-calc-val ${rrClass}">${dollarRisk}</span>`;
-}
-
-// Hook entry/sl/tp changes to calcRR
-['f-entry','f-exit'].forEach(id => {
-  const el = document.getElementById(id);
-  if (el) el.addEventListener('input', calcRR);
-});
-
-// ===== INIT =====
-window.addEventListener('DOMContentLoaded', () => {
-  applyTheme();
-  renderRecentAccounts();
-  // Don't auto-load data — wait for login
-  // (login screen is shown by default via CSS)
-});
-// Don't call renderDashboard/renderTradeTable at startup — called after login
-</script>
-</body>
-</html>
