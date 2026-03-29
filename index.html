@@ -805,583 +805,6 @@
 </style>
 </head>
 <body>
-
-<!-- LOGIN SCREEN -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">FX Journal</div>
-    <div class="login-sub">Trading Log v1.0</div>
-    <div class="login-title">Welcome back 👋</div>
-    <div class="login-desc">Enter your username to access your trading journal. Your data syncs across all devices automatically.</div>
-
-    <div class="login-field">
-      <label>Username</label>
-      <input type="text" id="login-username" placeholder="e.g. john"
-        maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false"
-        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
-    </div>
-    <div class="login-field">
-      <label>PIN (4–8 digits) <span style="color:var(--muted);font-weight:400;">— keeps your data private</span></label>
-      <input type="password" id="login-pin" inputmode="numeric" placeholder="••••"
-        maxlength="8" autocomplete="current-password"
-        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
-    </div>
-    <button class="login-btn" id="login-btn">Enter Journal →</button>
-    <div class="login-status" id="login-status"></div>
-
-    <!-- Recent accounts (from localStorage) -->
-    <div class="login-accounts" id="recent-accounts" style="display:none;">
-      <div class="login-accounts-title">Recent accounts</div>
-      <div id="recent-accounts-list"></div>
-    </div>
-  </div>
-</div>
-
-<div class="app">
-  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
-  <!-- SIDEBAR -->
-  <aside class="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-text">FX Journal</div>
-      <div class="logo-sub">Trading Log v1.0</div>
-    </div>
-    <nav>
-      <div class="nav-item active" onclick="showPage('dashboard', this)">
-        <span class="nav-icon">📊</span> Dashboard
-      </div>
-      <div class="nav-item" onclick="showPage('trades', this)">
-        <span class="nav-icon">📋</span> Trade Log
-      </div>
-      <div class="nav-item" onclick="showPage('stats', this)">
-        <span class="nav-icon">📈</span> Statistics
-      </div>
-      <div class="nav-item" onclick="showPage('strategy', this)">
-        <span class="nav-icon">🎯</span> Strategies
-      </div>
-      <div class="nav-item" onclick="showPage('calendar', this)">
-        <span class="nav-icon">📅</span> P&L Calendar
-      </div>
-    </nav>
-    <div class="sidebar-footer">
-      <div style="margin-bottom:8px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);">Initial Capital</div>
-      <div style="display:flex;gap:6px;align-items:center;">
-        <span style="font-size:12px;color:var(--muted);">$</span>
-        <input type="text" id="capital-input" inputmode="decimal"
-          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Roboto Mono',monospace;font-size:13px;font-weight:600;padding:6px 8px;outline:none;width:0;"
-          placeholder="10000"
-          onfocus="this.style.borderColor='var(--accent)'"
-          onblur="this.style.borderColor='var(--border)';saveCapital()"
-          onkeydown="if(event.key==='Enter')this.blur()"
-          oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
-      </div>
-      <div id="capital-return" style="margin-top:8px;font-size:12px;"></div>
-      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;font-size:10px;color:var(--muted);">XAU/USD Focus · Local storage</div>
-    </div>
-  </aside>
-
-  <!-- MAIN -->
-  <main class="main">
-    <header class="topbar">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">☰</button>
-        <div class="topbar-title" id="page-title">Dashboard</div>
-      </div>
-      <div class="topbar-actions">
-        <span class="sync-dot" id="sync-dot" title="Sync status"></span>
-        <div class="user-chip" onclick="logoutUser()" id="user-chip" title="Click to logout" style="display:none;">
-          <div class="login-avatar" id="user-avatar">?</div>
-          <span id="user-chip-name">—</span>
-        </div>
-        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
-        <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
-        <button class="btn btn-primary" onclick="openModal()">+ New Trade</button>
-      </div>
-    </header>
-
-    <div class="content">
-
-      <!-- DASHBOARD -->
-      <div id="page-dashboard" class="page active">
-        <!-- FIREBASE SETUP NOTICE -->
-        <div class="sync-banner show" id="firebase-notice" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);">
-          <span style="font-size:18px;">⚙️</span>
-          <div style="color:var(--warn);">
-            <strong>Firebase setup required for cloud sync.</strong>
-            To enable real sync: (1) Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent2);">console.firebase.google.com</a>,
-            create a project, enable <strong>Realtime Database</strong>, add a Web App, then
-            replace the <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">FIREBASE_CONFIG</code> values in this file's JS with your own.
-            Set DB rules to: <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">{".read":"auth==null","users/{u}":{"data":{"pinhash":{".write":"true"}}}}</code>
-            — or for quick dev use <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">".read":true,".write":true</code>.
-            <a href="#" onclick="document.getElementById('firebase-notice').style.display='none';return false;" style="color:var(--accent2);margin-left:8px;">Dismiss</a>
-          </div>
-        </div>
-          <span style="font-size:18px;">ℹ️</span>
-          <div>
-            <strong>Cross-device sync:</strong> Data is stored in your browser's localStorage — it is <strong>device & browser specific</strong>.
-            To sync between phone and computer, use <strong>Export CSV</strong> on one device and import on the other,
-            or host the file on a server with a shared backend.
-            <a href="#" onclick="document.getElementById('sync-banner').classList.remove('show');return false;" style="color:var(--accent2);margin-left:8px;text-decoration:none;">Dismiss</a>
-          </div>
-        </div>
-        <div class="period-row">
-          <span style="font-size:12px;color:var(--muted);margin-right:4px;">Period:</span>
-          <button class="period-btn active" onclick="setPeriod('day', this)">Day</button>
-          <button class="period-btn" onclick="setPeriod('week', this)">Week</button>
-          <button class="period-btn" onclick="setPeriod('month', this)">Month</button>
-          <button class="period-btn" onclick="setPeriod('all', this)">All Time</button>
-        </div>
-
-        <div class="kpi-row" id="kpi-row"></div>
-
-        <div class="chart-row">
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Equity Curve</span>
-              <span style="font-size:12px;color:var(--muted)">Cumulative P&L (USD)</span>
-            </div>
-            <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header">
-              <span class="card-title">Win / Loss</span>
-            </div>
-            <div class="donut-wrap">
-              <canvas id="winChart" style="max-width:160px;max-height:160px;"></canvas>
-              <div class="donut-center" id="donut-center"></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="chart-row">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Daily P&L</span></div>
-            <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">P&L by Pair</span></div>
-            <div class="pair-bar-wrap" id="pair-bars"></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TRADE LOG -->
-      <div id="page-trades" class="page">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-          <div style="display:flex;gap:8px;align-items:center;">
-            <input class="form-input" style="width:220px;" placeholder="🔍 Search pair, strategy, note..." oninput="filterTrades(this.value)" id="search-input">
-            <select class="form-select" style="width:140px;" onchange="filterTrades()" id="filter-result">
-              <option value="">All Results</option>
-              <option value="WIN">WIN</option>
-              <option value="LOSS">LOSS</option>
-            </select>
-            <select class="form-select" style="width:140px;" onchange="filterTrades()" id="filter-side">
-              <option value="">All Sides</option>
-              <option value="BUY">BUY</option>
-              <option value="SELL">SELL</option>
-            </select>
-          </div>
-          <div style="font-size:12px;color:var(--muted)" id="trade-count"></div>
-        </div>
-        <div class="card table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th onclick="sortTable('date')">Date ↕</th>
-                <th>Pair</th>
-                <th>Side</th>
-                <th>Entry</th>
-                <th>Exit</th>
-                <th>SL / TP</th>
-                <th>R:R</th>
-                <th>Lot</th>
-                <th onclick="sortTable('pnl')">P&L ↕</th>
-                <th>Result</th>
-                <th>Strategy</th>
-                <th>Note</th>
-                <th>Chart</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody id="trade-table-body"></tbody>
-          </table>
-          <div id="empty-trades" class="empty-state" style="display:none;">
-            <div class="empty-icon">📭</div>
-            <div class="empty-text">No trades yet. Click <strong>+ New Trade</strong> to add your first entry.</div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STATISTICS -->
-      <div id="page-stats" class="page">
-        <div class="kpi-row" id="stats-kpi-row"></div>
-
-        <div class="stats-section">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Strategy Performance</span></div>
-            <div id="strat-table"></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Pair Performance</span></div>
-            <div id="pair-table"></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Side Breakdown</span></div>
-            <div id="side-table"></div>
-          </div>
-        </div>
-
-        <div class="chart-row">
-          <div class="card">
-            <div class="card-header"><span class="card-title">Monthly P&L</span></div>
-            <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
-          </div>
-          <div class="card">
-            <div class="card-header"><span class="card-title">Win Rate by Strategy</span></div>
-            <div class="chart-wrap"><canvas id="stratChart"></canvas></div>
-          </div>
-        </div>
-      </div>
-
-      <!-- STRATEGY PAGE -->
-      <div id="page-strategy" class="page">
-        <div class="strat-page-layout">
-
-          <!-- LEFT: Strategy list -->
-          <div>
-            <div class="strat-add-bar">
-              <input type="text" id="strat-new-input" placeholder="New strategy name..." maxlength="60"
-                onkeydown="if(event.key==='Enter')addStrategy()">
-              <button onclick="addStrategy()">+ Add</button>
-            </div>
-            <div id="strat-list"></div>
-          </div>
-
-          <!-- RIGHT: Strategy detail -->
-          <div id="strat-detail-panel">
-            <div class="strat-empty">
-              <div class="strat-empty-icon">🎯</div>
-              <div class="strat-empty-title">Select a Strategy</div>
-              <div style="font-size:13px;color:var(--muted);">Click any strategy on the left to see detailed analytics</div>
-            </div>
-          </div>
-
-        </div>
-      </div>
-
-      <!-- P&L CALENDAR -->
-      <div id="page-calendar" class="page">
-        <!-- View toggle + Nav -->
-        <div class="cal-toolbar">
-          <div class="cal-view-toggle">
-            <button class="cal-view-btn active" id="calv-month" onclick="setCalView('month')">Month</button>
-            <button class="cal-view-btn" id="calv-week" onclick="setCalView('week')">Week</button>
-            <button class="cal-view-btn" id="calv-year" onclick="setCalView('year')">Year</button>
-          </div>
-          <div class="cal-nav">
-            <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
-            <div class="cal-period-label" id="cal-period-label">—</div>
-            <button class="cal-nav-btn" onclick="calNav(1)">›</button>
-            <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:12px;padding:6px 14px;font-weight:600;">Today</button>
-          </div>
-        </div>
-
-        <!-- Summary KPI strip -->
-        <div class="cal-summary-row" id="cal-summary"></div>
-
-        <!-- Calendar body -->
-        <div id="cal-body"></div>
-      </div>
-
-    </div>
-  </main>
-</div>
-
-<!-- PRICE NUMPAD -->
-<div class="numpad-overlay" id="numpad-overlay" onclick="if(event.target===this)closeNumpad()">
-  <div class="numpad-popup">
-    <div class="numpad-header">
-      <div>
-        <div class="numpad-field-label" id="numpad-label">Entry Price</div>
-        <div class="numpad-display" id="numpad-display">—</div>
-        <div class="numpad-format-hint" id="numpad-fmt"></div>
-      </div>
-      <button class="numpad-close" onclick="closeNumpad()">✕</button>
-    </div>
-    <!-- quick ±step buttons -->
-    <div class="numpad-steps" id="numpad-steps"></div>
-    <!-- digit grid -->
-    <div class="numpad-grid">
-      <button class="numpad-btn" onclick="numpadKey('7')">7</button>
-      <button class="numpad-btn" onclick="numpadKey('8')">8</button>
-      <button class="numpad-btn" onclick="numpadKey('9')">9</button>
-      <button class="numpad-btn" onclick="numpadKey('4')">4</button>
-      <button class="numpad-btn" onclick="numpadKey('5')">5</button>
-      <button class="numpad-btn" onclick="numpadKey('6')">6</button>
-      <button class="numpad-btn" onclick="numpadKey('1')">1</button>
-      <button class="numpad-btn" onclick="numpadKey('2')">2</button>
-      <button class="numpad-btn" onclick="numpadKey('3')">3</button>
-      <button class="numpad-btn zero" onclick="numpadKey('0')">0</button>
-      <button class="numpad-btn dot" onclick="numpadKey('.')">.</button>
-      <button class="numpad-btn del" onclick="numpadKey('⌫')">⌫</button>
-    </div>
-    <button class="numpad-confirm" onclick="confirmNumpad()">✓ Confirm</button>
-  </div>
-</div>
-
-<!-- ADD TRADE MODAL -->
-<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-heading">📝 Add New Trade</div>
-      <button class="modal-close" onclick="closeModal()">✕</button>
-    </div>
-    <div class="modal-body">
-      <input type="hidden" id="edit-index" value="">
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Date & Time</label>
-          <div style="position:relative;">
-            <input type="text" class="form-input" id="f-date-display" placeholder="Mar 29, 2026 12:30" readonly style="cursor:pointer;padding-right:36px;" onclick="toggleDatePicker()">
-            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;">📅</span>
-            <input type="hidden" id="f-date">
-            <!-- CUSTOM DATE PICKER -->
-            <div id="custom-datepicker" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,.5);">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-                <button type="button" onclick="changeMonth(-1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:5px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">‹</button>
-                <span id="dp-month-label" style="font-weight:700;font-size:13px;"></span>
-                <button type="button" onclick="changeMonth(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:5px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">›</button>
-              </div>
-              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;">
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Su</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Mo</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Tu</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">We</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Th</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Fr</div>
-                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Sa</div>
-              </div>
-              <div id="dp-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
-              <!-- TIME -->
-              <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:8px;">
-                <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Time</span>
-                <input type="number" id="dp-hour" min="0" max="23" style="width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Roboto Mono';font-size:13px;padding:5px 8px;text-align:center;outline:none;" oninput="updateDateValue()">
-                <span style="color:var(--muted);font-weight:700;">:</span>
-                <input type="number" id="dp-min" min="0" max="59" style="width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Roboto Mono';font-size:13px;padding:5px 8px;text-align:center;outline:none;" oninput="updateDateValue()">
-                <button type="button" onclick="closeDatePicker()" style="margin-left:auto;background:var(--accent);border:none;color:#0a0c10;font-family:'Roboto';font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">Done</button>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Pair</label>
-          <select class="form-select" id="f-pair" onchange="updatePriceHints()">
-            <optgroup label="Gold">
-              <option>XAU/USD</option>
-            </optgroup>
-            <optgroup label="/USD Pairs">
-              <option>EUR/USD</option>
-              <option>GBP/USD</option>
-              <option>AUD/USD</option>
-              <option>NZD/USD</option>
-            </optgroup>
-            <optgroup label="/EUR Pairs">
-              <option>EUR/GBP</option>
-              <option>EUR/JPY</option>
-              <option>EUR/CHF</option>
-            </optgroup>
-            <optgroup label="/JPY Pairs">
-              <option>USD/JPY</option>
-              <option>GBP/JPY</option>
-              <option>AUD/JPY</option>
-            </optgroup>
-            <optgroup label="Other">
-              <option>USD/CHF</option>
-              <option>USD/CAD</option>
-              <option>USD/SGD</option>
-            </optgroup>
-          </select>
-        </div>
-      </div>
-
-      <div class="form-row-3">
-        <div class="form-group">
-          <label class="form-label">Side</label>
-          <div class="side-toggle">
-            <button class="side-opt buy active" id="opt-buy" onclick="setSide('BUY')">▲ BUY</button>
-            <button class="side-opt sell" id="opt-sell" onclick="setSide('SELL')">▼ SELL</button>
-          </div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Entry Price</label>
-          <div style="position:relative;display:flex;gap:0;">
-            <input type="text" inputmode="decimal" class="form-input" id="f-entry"
-              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
-              oninput="sanitizePriceInput(this);calcRR()"
-              onkeydown="priceKeydown(event,'f-entry')">
-            <button type="button" onclick="openNumpad('f-entry','Entry Price')"
-              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
-              title="Open numpad">⌨</button>
-          </div>
-          <div class="price-hint" id="hint-entry"></div>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Exit Price</label>
-          <div style="position:relative;display:flex;gap:0;">
-            <input type="text" inputmode="decimal" class="form-input" id="f-exit"
-              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
-              oninput="sanitizePriceInput(this);calcRR()"
-              onkeydown="priceKeydown(event,'f-exit')">
-            <button type="button" onclick="openNumpad('f-exit','Exit Price')"
-              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
-              title="Open numpad">⌨</button>
-          </div>
-          <div class="price-hint" id="hint-exit"></div>
-        </div>
-      </div>
-
-      <div class="form-row-3">
-        <div class="form-group">
-          <label class="form-label">Lot Size</label>
-          <input type="number" class="form-input" id="f-lot" placeholder="0.01" step="0.01">
-        </div>
-        <div class="form-group">
-          <label class="form-label">P&L (USD)</label>
-          <input type="number" class="form-input" id="f-pnl" placeholder="Auto or manual" step="0.01">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Result</label>
-          <div class="result-toggle">
-            <button class="result-opt win active" id="opt-win" onclick="setResult('WIN')">✓ WIN</button>
-            <button class="result-opt loss" id="opt-loss" onclick="setResult('LOSS')">✗ LOSS</button>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Strategy</label>
-          <select class="form-select" id="f-strategy">
-            <option value="">— Select Strategy —</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label class="form-label">Session</label>
-          <select class="form-select" id="f-session">
-            <option value="">— Select Session —</option>
-            <option>London</option>
-            <option>New York</option>
-            <option>Asia</option>
-            <option>London-NY Overlap</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- RISK MANAGEMENT PANEL -->
-      <div class="risk-panel">
-        <div class="risk-panel-title">⚡ Risk Management</div>
-        <div class="form-row-3" style="margin-bottom:10px;">
-          <div class="form-group">
-            <label class="form-label">Stop Loss</label>
-            <div style="display:flex;gap:0;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-sl"
-                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(244,63,94,.3);"
-                oninput="sanitizePriceInput(this);calcRR()"
-                onkeydown="priceKeydown(event,'f-sl')">
-              <button type="button" onclick="openNumpad('f-sl','Stop Loss')"
-                style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--loss);cursor:pointer;font-size:14px;flex-shrink:0;"
-                title="Open numpad">⌨</button>
-            </div>
-            <div class="price-hint" id="hint-sl"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Take Profit</label>
-            <div style="display:flex;gap:0;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-tp"
-                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(34,197,94,.3);"
-                oninput="sanitizePriceInput(this);calcRR()"
-                onkeydown="priceKeydown(event,'f-tp')">
-              <button type="button" onclick="openNumpad('f-tp','Take Profit')"
-                style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--win);cursor:pointer;font-size:14px;flex-shrink:0;"
-                title="Open numpad">⌨</button>
-            </div>
-            <div class="price-hint" id="hint-tp"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Risk % of Capital</label>
-            <input type="number" class="form-input" id="f-risk-pct" placeholder="e.g. 1" step="0.1" min="0" max="100" style="font-family:'Roboto Mono';" oninput="calcRR()">
-          </div>
-        </div>
-        <!-- LIVE RR CALCULATOR -->
-        <div id="rr-display" style="display:none;background:var(--bg);border-radius:7px;padding:10px 14px;">
-          <div style="display:flex;gap:20px;flex-wrap:wrap;">
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">R:R Ratio</span>
-              <span class="risk-calc-val" id="rr-ratio">—</span>
-            </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">Risk (pts)</span>
-              <span class="risk-calc-val" id="rr-risk-pts">—</span>
-            </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">Reward (pts)</span>
-              <span class="risk-calc-val" id="rr-reward-pts">—</span>
-            </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">$ at Risk</span>
-              <span class="risk-calc-val" id="rr-dollar-risk">—</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="form-group" style="margin-bottom:14px;">
-        <label class="form-label">Entry Reason / Note</label>
-        <textarea class="form-textarea" id="f-note" placeholder="Why did you enter this trade? Setup, context, confluences..."></textarea>
-      </div>
-
-      <div class="form-group">
-        <label class="form-label">Chart Screenshots <span id="img-count-label" style="color:var(--accent);font-weight:400;font-size:10px;"></span></label>
-        <!-- DROP ZONE -->
-        <div id="upload-zone" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;position:relative;" ondragover="e=>{e.preventDefault();document.getElementById('upload-zone').style.borderColor='var(--accent)'}" ondragleave="document.getElementById('upload-zone').style.borderColor='var(--border)'" ondrop="handleDropImages(event)">
-          <input type="file" id="f-image" accept="image/*" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;" onchange="handleImageUpload(this)">
-          <div style="font-size:24px;margin-bottom:4px;">📷</div>
-          <div style="font-size:12px;color:var(--muted);">Click / Drag images here &nbsp;·&nbsp; <kbd style="background:var(--border);padding:1px 5px;border-radius:3px;font-size:11px;">Ctrl+V</kbd> paste from clipboard</div>
-        </div>
-        <!-- PREVIEW GRID -->
-        <div id="img-preview-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
-      </div>
-    </div>
-    <div class="modal-footer">
-      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
-      <button class="btn btn-primary" onclick="saveTrade()">Save Trade</button>
-    </div>
-  </div>
-</div>
-
-<!-- LIGHTBOX -->
-<div class="lightbox" id="lightbox" onclick="closeLightbox()">
-  <button onclick="lbNav(-1,event)" style="position:fixed;left:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:none;color:#fff;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:8px;z-index:2001;">‹</button>
-  <img id="lightbox-img" src="" alt="Chart" style="max-width:90vw;max-height:90vh;border-radius:8px;">
-  <button onclick="lbNav(1,event)" style="position:fixed;right:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:none;color:#fff;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:8px;z-index:2001;">›</button>
-  <div id="lb-counter" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:5px 14px;border-radius:20px;"></div>
-</div>
-
-<!-- DAY DETAIL MODAL -->
-<div class="modal-overlay" id="day-modal-overlay" onclick="if(event.target===this)closeDayModal()">
-  <div class="modal" style="width:720px;">
-    <div class="modal-header">
-      <div>
-        <div class="modal-title" id="day-modal-title">Trades on —</div>
-        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="day-modal-sub"></div>
-      </div>
-      <button class="modal-close" onclick="closeDayModal()">✕</button>
-    </div>
-    <div class="modal-body" style="padding:0;">
-      <div id="day-modal-body"></div>
-    </div>
-  </div>
-</div>
 <script>
 // ===== FIREBASE CONFIG =====
 // ⚠️  Replace these values with your own Firebase project config
@@ -3172,3 +2595,583 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-pin')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
   // Don't auto-load data — wait for login
+});
+// Don't call renderDashboard/renderTradeTable at startup — called after login
+</script>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">FX Journal</div>
+    <div class="login-sub">Trading Log v1.0</div>
+    <div class="login-title">Welcome back 👋</div>
+    <div class="login-desc">Enter your username to access your trading journal. Your data syncs across all devices automatically.</div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="e.g. john"
+        maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false"
+        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
+    </div>
+    <div class="login-field">
+      <label>PIN (4–8 digits) <span style="color:var(--muted);font-weight:400;">— keeps your data private</span></label>
+      <input type="password" id="login-pin" inputmode="numeric" placeholder="••••"
+        maxlength="8" autocomplete="current-password"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
+    </div>
+    <button class="login-btn" id="login-btn">Enter Journal →</button>
+    <div class="login-status" id="login-status"></div>
+
+    <!-- Recent accounts (from localStorage) -->
+    <div class="login-accounts" id="recent-accounts" style="display:none;">
+      <div class="login-accounts-title">Recent accounts</div>
+      <div id="recent-accounts-list"></div>
+    </div>
+  </div>
+</div>
+
+<div class="app">
+  <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-text">FX Journal</div>
+      <div class="logo-sub">Trading Log v1.0</div>
+    </div>
+    <nav>
+      <div class="nav-item active" onclick="showPage('dashboard', this)">
+        <span class="nav-icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showPage('trades', this)">
+        <span class="nav-icon">📋</span> Trade Log
+      </div>
+      <div class="nav-item" onclick="showPage('stats', this)">
+        <span class="nav-icon">📈</span> Statistics
+      </div>
+      <div class="nav-item" onclick="showPage('strategy', this)">
+        <span class="nav-icon">🎯</span> Strategies
+      </div>
+      <div class="nav-item" onclick="showPage('calendar', this)">
+        <span class="nav-icon">📅</span> P&L Calendar
+      </div>
+    </nav>
+    <div class="sidebar-footer">
+      <div style="margin-bottom:8px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);">Initial Capital</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <span style="font-size:12px;color:var(--muted);">$</span>
+        <input type="text" id="capital-input" inputmode="decimal"
+          style="flex:1;background:var(--surface2);border:1px solid var(--border);border-radius:6px;color:var(--text);font-family:'Roboto Mono',monospace;font-size:13px;font-weight:600;padding:6px 8px;outline:none;width:0;"
+          placeholder="10000"
+          onfocus="this.style.borderColor='var(--accent)'"
+          onblur="this.style.borderColor='var(--border)';saveCapital()"
+          onkeydown="if(event.key==='Enter')this.blur()"
+          oninput="this.value=this.value.replace(/[^0-9.]/g,'')">
+      </div>
+      <div id="capital-return" style="margin-top:8px;font-size:12px;"></div>
+      <div style="margin-top:10px;border-top:1px solid var(--border);padding-top:8px;font-size:10px;color:var(--muted);">XAU/USD Focus · Local storage</div>
+    </div>
+  </aside>
+
+  <!-- MAIN -->
+  <main class="main">
+    <header class="topbar">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">☰</button>
+        <div class="topbar-title" id="page-title">Dashboard</div>
+      </div>
+      <div class="topbar-actions">
+        <span class="sync-dot" id="sync-dot" title="Sync status"></span>
+        <div class="user-chip" onclick="logoutUser()" id="user-chip" title="Click to logout" style="display:none;">
+          <div class="login-avatar" id="user-avatar">?</div>
+          <span id="user-chip-name">—</span>
+        </div>
+        <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
+        <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
+        <button class="btn btn-primary" onclick="openModal()">+ New Trade</button>
+      </div>
+    </header>
+
+    <div class="content">
+
+      <!-- DASHBOARD -->
+      <div id="page-dashboard" class="page active">
+        <!-- FIREBASE SETUP NOTICE -->
+        <div class="sync-banner show" id="firebase-notice" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);">
+          <span style="font-size:18px;">⚙️</span>
+          <div style="color:var(--warn);">
+            <strong>Firebase setup required for cloud sync.</strong>
+            To enable real sync: (1) Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent2);">console.firebase.google.com</a>,
+            create a project, enable <strong>Realtime Database</strong>, add a Web App, then
+            replace the <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">FIREBASE_CONFIG</code> values in this file's JS with your own.
+            Set DB rules to: <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">{".read":"auth==null","users/{u}":{"data":{"pinhash":{".write":"true"}}}}</code>
+            — or for quick dev use <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">".read":true,".write":true</code>.
+            <a href="#" onclick="document.getElementById('firebase-notice').style.display='none';return false;" style="color:var(--accent2);margin-left:8px;">Dismiss</a>
+          </div>
+        </div>
+          <span style="font-size:18px;">ℹ️</span>
+          <div>
+            <strong>Cross-device sync:</strong> Data is stored in your browser's localStorage — it is <strong>device & browser specific</strong>.
+            To sync between phone and computer, use <strong>Export CSV</strong> on one device and import on the other,
+            or host the file on a server with a shared backend.
+            <a href="#" onclick="document.getElementById('sync-banner').classList.remove('show');return false;" style="color:var(--accent2);margin-left:8px;text-decoration:none;">Dismiss</a>
+          </div>
+        </div>
+        <div class="period-row">
+          <span style="font-size:12px;color:var(--muted);margin-right:4px;">Period:</span>
+          <button class="period-btn active" onclick="setPeriod('day', this)">Day</button>
+          <button class="period-btn" onclick="setPeriod('week', this)">Week</button>
+          <button class="period-btn" onclick="setPeriod('month', this)">Month</button>
+          <button class="period-btn" onclick="setPeriod('all', this)">All Time</button>
+        </div>
+
+        <div class="kpi-row" id="kpi-row"></div>
+
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Equity Curve</span>
+              <span style="font-size:12px;color:var(--muted)">Cumulative P&L (USD)</span>
+            </div>
+            <div class="chart-wrap"><canvas id="equityChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header">
+              <span class="card-title">Win / Loss</span>
+            </div>
+            <div class="donut-wrap">
+              <canvas id="winChart" style="max-width:160px;max-height:160px;"></canvas>
+              <div class="donut-center" id="donut-center"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Daily P&L</span></div>
+            <div class="chart-wrap"><canvas id="dailyChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">P&L by Pair</span></div>
+            <div class="pair-bar-wrap" id="pair-bars"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TRADE LOG -->
+      <div id="page-trades" class="page">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input class="form-input" style="width:220px;" placeholder="🔍 Search pair, strategy, note..." oninput="filterTrades(this.value)" id="search-input">
+            <select class="form-select" style="width:140px;" onchange="filterTrades()" id="filter-result">
+              <option value="">All Results</option>
+              <option value="WIN">WIN</option>
+              <option value="LOSS">LOSS</option>
+            </select>
+            <select class="form-select" style="width:140px;" onchange="filterTrades()" id="filter-side">
+              <option value="">All Sides</option>
+              <option value="BUY">BUY</option>
+              <option value="SELL">SELL</option>
+            </select>
+          </div>
+          <div style="font-size:12px;color:var(--muted)" id="trade-count"></div>
+        </div>
+        <div class="card table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th onclick="sortTable('date')">Date ↕</th>
+                <th>Pair</th>
+                <th>Side</th>
+                <th>Entry</th>
+                <th>Exit</th>
+                <th>SL / TP</th>
+                <th>R:R</th>
+                <th>Lot</th>
+                <th onclick="sortTable('pnl')">P&L ↕</th>
+                <th>Result</th>
+                <th>Strategy</th>
+                <th>Note</th>
+                <th>Chart</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="trade-table-body"></tbody>
+          </table>
+          <div id="empty-trades" class="empty-state" style="display:none;">
+            <div class="empty-icon">📭</div>
+            <div class="empty-text">No trades yet. Click <strong>+ New Trade</strong> to add your first entry.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STATISTICS -->
+      <div id="page-stats" class="page">
+        <div class="kpi-row" id="stats-kpi-row"></div>
+
+        <div class="stats-section">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Strategy Performance</span></div>
+            <div id="strat-table"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Pair Performance</span></div>
+            <div id="pair-table"></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Side Breakdown</span></div>
+            <div id="side-table"></div>
+          </div>
+        </div>
+
+        <div class="chart-row">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Monthly P&L</span></div>
+            <div class="chart-wrap"><canvas id="monthChart"></canvas></div>
+          </div>
+          <div class="card">
+            <div class="card-header"><span class="card-title">Win Rate by Strategy</span></div>
+            <div class="chart-wrap"><canvas id="stratChart"></canvas></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STRATEGY PAGE -->
+      <div id="page-strategy" class="page">
+        <div class="strat-page-layout">
+
+          <!-- LEFT: Strategy list -->
+          <div>
+            <div class="strat-add-bar">
+              <input type="text" id="strat-new-input" placeholder="New strategy name..." maxlength="60"
+                onkeydown="if(event.key==='Enter')addStrategy()">
+              <button onclick="addStrategy()">+ Add</button>
+            </div>
+            <div id="strat-list"></div>
+          </div>
+
+          <!-- RIGHT: Strategy detail -->
+          <div id="strat-detail-panel">
+            <div class="strat-empty">
+              <div class="strat-empty-icon">🎯</div>
+              <div class="strat-empty-title">Select a Strategy</div>
+              <div style="font-size:13px;color:var(--muted);">Click any strategy on the left to see detailed analytics</div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- P&L CALENDAR -->
+      <div id="page-calendar" class="page">
+        <!-- View toggle + Nav -->
+        <div class="cal-toolbar">
+          <div class="cal-view-toggle">
+            <button class="cal-view-btn active" id="calv-month" onclick="setCalView('month')">Month</button>
+            <button class="cal-view-btn" id="calv-week" onclick="setCalView('week')">Week</button>
+            <button class="cal-view-btn" id="calv-year" onclick="setCalView('year')">Year</button>
+          </div>
+          <div class="cal-nav">
+            <button class="cal-nav-btn" onclick="calNav(-1)">‹</button>
+            <div class="cal-period-label" id="cal-period-label">—</div>
+            <button class="cal-nav-btn" onclick="calNav(1)">›</button>
+            <button class="cal-nav-btn" onclick="calGoToday()" style="font-size:12px;padding:6px 14px;font-weight:600;">Today</button>
+          </div>
+        </div>
+
+        <!-- Summary KPI strip -->
+        <div class="cal-summary-row" id="cal-summary"></div>
+
+        <!-- Calendar body -->
+        <div id="cal-body"></div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- PRICE NUMPAD -->
+<div class="numpad-overlay" id="numpad-overlay" onclick="if(event.target===this)closeNumpad()">
+  <div class="numpad-popup">
+    <div class="numpad-header">
+      <div>
+        <div class="numpad-field-label" id="numpad-label">Entry Price</div>
+        <div class="numpad-display" id="numpad-display">—</div>
+        <div class="numpad-format-hint" id="numpad-fmt"></div>
+      </div>
+      <button class="numpad-close" onclick="closeNumpad()">✕</button>
+    </div>
+    <!-- quick ±step buttons -->
+    <div class="numpad-steps" id="numpad-steps"></div>
+    <!-- digit grid -->
+    <div class="numpad-grid">
+      <button class="numpad-btn" onclick="numpadKey('7')">7</button>
+      <button class="numpad-btn" onclick="numpadKey('8')">8</button>
+      <button class="numpad-btn" onclick="numpadKey('9')">9</button>
+      <button class="numpad-btn" onclick="numpadKey('4')">4</button>
+      <button class="numpad-btn" onclick="numpadKey('5')">5</button>
+      <button class="numpad-btn" onclick="numpadKey('6')">6</button>
+      <button class="numpad-btn" onclick="numpadKey('1')">1</button>
+      <button class="numpad-btn" onclick="numpadKey('2')">2</button>
+      <button class="numpad-btn" onclick="numpadKey('3')">3</button>
+      <button class="numpad-btn zero" onclick="numpadKey('0')">0</button>
+      <button class="numpad-btn dot" onclick="numpadKey('.')">.</button>
+      <button class="numpad-btn del" onclick="numpadKey('⌫')">⌫</button>
+    </div>
+    <button class="numpad-confirm" onclick="confirmNumpad()">✓ Confirm</button>
+  </div>
+</div>
+
+<!-- ADD TRADE MODAL -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModalOutside(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-heading">📝 Add New Trade</div>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="edit-index" value="">
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Date & Time</label>
+          <div style="position:relative;">
+            <input type="text" class="form-input" id="f-date-display" placeholder="Mar 29, 2026 12:30" readonly style="cursor:pointer;padding-right:36px;" onclick="toggleDatePicker()">
+            <span style="position:absolute;right:10px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none;">📅</span>
+            <input type="hidden" id="f-date">
+            <!-- CUSTOM DATE PICKER -->
+            <div id="custom-datepicker" style="display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;width:300px;box-shadow:0 8px 32px rgba(0,0,0,.5);">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+                <button type="button" onclick="changeMonth(-1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:5px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">‹</button>
+                <span id="dp-month-label" style="font-weight:700;font-size:13px;"></span>
+                <button type="button" onclick="changeMonth(1)" style="background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:5px;" onmouseover="this.style.color='var(--text)'" onmouseout="this.style.color='var(--muted)'">›</button>
+              </div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;margin-bottom:8px;">
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Su</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Mo</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Tu</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">We</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Th</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Fr</div>
+                <div style="text-align:center;font-size:10px;color:var(--muted);font-weight:600;padding:4px;">Sa</div>
+              </div>
+              <div id="dp-days" style="display:grid;grid-template-columns:repeat(7,1fr);gap:2px;"></div>
+              <!-- TIME -->
+              <div style="margin-top:12px;border-top:1px solid var(--border);padding-top:10px;display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">Time</span>
+                <input type="number" id="dp-hour" min="0" max="23" style="width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Roboto Mono';font-size:13px;padding:5px 8px;text-align:center;outline:none;" oninput="updateDateValue()">
+                <span style="color:var(--muted);font-weight:700;">:</span>
+                <input type="number" id="dp-min" min="0" max="59" style="width:52px;background:var(--surface2);border:1px solid var(--border);border-radius:5px;color:var(--text);font-family:'Roboto Mono';font-size:13px;padding:5px 8px;text-align:center;outline:none;" oninput="updateDateValue()">
+                <button type="button" onclick="closeDatePicker()" style="margin-left:auto;background:var(--accent);border:none;color:#0a0c10;font-family:'Roboto';font-size:12px;font-weight:700;padding:6px 14px;border-radius:6px;cursor:pointer;">Done</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pair</label>
+          <select class="form-select" id="f-pair" onchange="updatePriceHints()">
+            <optgroup label="Gold">
+              <option>XAU/USD</option>
+            </optgroup>
+            <optgroup label="/USD Pairs">
+              <option>EUR/USD</option>
+              <option>GBP/USD</option>
+              <option>AUD/USD</option>
+              <option>NZD/USD</option>
+            </optgroup>
+            <optgroup label="/EUR Pairs">
+              <option>EUR/GBP</option>
+              <option>EUR/JPY</option>
+              <option>EUR/CHF</option>
+            </optgroup>
+            <optgroup label="/JPY Pairs">
+              <option>USD/JPY</option>
+              <option>GBP/JPY</option>
+              <option>AUD/JPY</option>
+            </optgroup>
+            <optgroup label="Other">
+              <option>USD/CHF</option>
+              <option>USD/CAD</option>
+              <option>USD/SGD</option>
+            </optgroup>
+          </select>
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Side</label>
+          <div class="side-toggle">
+            <button class="side-opt buy active" id="opt-buy" onclick="setSide('BUY')">▲ BUY</button>
+            <button class="side-opt sell" id="opt-sell" onclick="setSide('SELL')">▼ SELL</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Entry Price</label>
+          <div style="position:relative;display:flex;gap:0;">
+            <input type="text" inputmode="decimal" class="form-input" id="f-entry"
+              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
+              oninput="sanitizePriceInput(this);calcRR()"
+              onkeydown="priceKeydown(event,'f-entry')">
+            <button type="button" onclick="openNumpad('f-entry','Entry Price')"
+              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
+              title="Open numpad">⌨</button>
+          </div>
+          <div class="price-hint" id="hint-entry"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Exit Price</label>
+          <div style="position:relative;display:flex;gap:0;">
+            <input type="text" inputmode="decimal" class="form-input" id="f-exit"
+              placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;"
+              oninput="sanitizePriceInput(this);calcRR()"
+              onkeydown="priceKeydown(event,'f-exit')">
+            <button type="button" onclick="openNumpad('f-exit','Exit Price')"
+              style="background:var(--border);border:1px solid var(--border);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--muted);cursor:pointer;font-size:14px;flex-shrink:0;"
+              title="Open numpad">⌨</button>
+          </div>
+          <div class="price-hint" id="hint-exit"></div>
+        </div>
+      </div>
+
+      <div class="form-row-3">
+        <div class="form-group">
+          <label class="form-label">Lot Size</label>
+          <input type="number" class="form-input" id="f-lot" placeholder="0.01" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">P&L (USD)</label>
+          <input type="number" class="form-input" id="f-pnl" placeholder="Auto or manual" step="0.01">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Result</label>
+          <div class="result-toggle">
+            <button class="result-opt win active" id="opt-win" onclick="setResult('WIN')">✓ WIN</button>
+            <button class="result-opt loss" id="opt-loss" onclick="setResult('LOSS')">✗ LOSS</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Strategy</label>
+          <select class="form-select" id="f-strategy">
+            <option value="">— Select Strategy —</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Session</label>
+          <select class="form-select" id="f-session">
+            <option value="">— Select Session —</option>
+            <option>London</option>
+            <option>New York</option>
+            <option>Asia</option>
+            <option>London-NY Overlap</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- RISK MANAGEMENT PANEL -->
+      <div class="risk-panel">
+        <div class="risk-panel-title">⚡ Risk Management</div>
+        <div class="form-row-3" style="margin-bottom:10px;">
+          <div class="form-group">
+            <label class="form-label">Stop Loss</label>
+            <div style="display:flex;gap:0;">
+              <input type="text" inputmode="decimal" class="form-input" id="f-sl"
+                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(244,63,94,.3);"
+                oninput="sanitizePriceInput(this);calcRR()"
+                onkeydown="priceKeydown(event,'f-sl')">
+              <button type="button" onclick="openNumpad('f-sl','Stop Loss')"
+                style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--loss);cursor:pointer;font-size:14px;flex-shrink:0;"
+                title="Open numpad">⌨</button>
+            </div>
+            <div class="price-hint" id="hint-sl"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Take Profit</label>
+            <div style="display:flex;gap:0;">
+              <input type="text" inputmode="decimal" class="form-input" id="f-tp"
+                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(34,197,94,.3);"
+                oninput="sanitizePriceInput(this);calcRR()"
+                onkeydown="priceKeydown(event,'f-tp')">
+              <button type="button" onclick="openNumpad('f-tp','Take Profit')"
+                style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--win);cursor:pointer;font-size:14px;flex-shrink:0;"
+                title="Open numpad">⌨</button>
+            </div>
+            <div class="price-hint" id="hint-tp"></div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Risk % of Capital</label>
+            <input type="number" class="form-input" id="f-risk-pct" placeholder="e.g. 1" step="0.1" min="0" max="100" style="font-family:'Roboto Mono';" oninput="calcRR()">
+          </div>
+        </div>
+        <!-- LIVE RR CALCULATOR -->
+        <div id="rr-display" style="display:none;background:var(--bg);border-radius:7px;padding:10px 14px;">
+          <div style="display:flex;gap:20px;flex-wrap:wrap;">
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
+              <span class="risk-calc-label">R:R Ratio</span>
+              <span class="risk-calc-val" id="rr-ratio">—</span>
+            </div>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
+              <span class="risk-calc-label">Risk (pts)</span>
+              <span class="risk-calc-val" id="rr-risk-pts">—</span>
+            </div>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
+              <span class="risk-calc-label">Reward (pts)</span>
+              <span class="risk-calc-val" id="rr-reward-pts">—</span>
+            </div>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
+              <span class="risk-calc-label">$ at Risk</span>
+              <span class="risk-calc-val" id="rr-dollar-risk">—</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-bottom:14px;">
+        <label class="form-label">Entry Reason / Note</label>
+        <textarea class="form-textarea" id="f-note" placeholder="Why did you enter this trade? Setup, context, confluences..."></textarea>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">Chart Screenshots <span id="img-count-label" style="color:var(--accent);font-weight:400;font-size:10px;"></span></label>
+        <!-- DROP ZONE -->
+        <div id="upload-zone" style="border:2px dashed var(--border);border-radius:8px;padding:16px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;position:relative;" ondragover="e=>{e.preventDefault();document.getElementById('upload-zone').style.borderColor='var(--accent)'}" ondragleave="document.getElementById('upload-zone').style.borderColor='var(--border)'" ondrop="handleDropImages(event)">
+          <input type="file" id="f-image" accept="image/*" multiple style="position:absolute;inset:0;opacity:0;cursor:pointer;z-index:2;" onchange="handleImageUpload(this)">
+          <div style="font-size:24px;margin-bottom:4px;">📷</div>
+          <div style="font-size:12px;color:var(--muted);">Click / Drag images here &nbsp;·&nbsp; <kbd style="background:var(--border);padding:1px 5px;border-radius:3px;font-size:11px;">Ctrl+V</kbd> paste from clipboard</div>
+        </div>
+        <!-- PREVIEW GRID -->
+        <div id="img-preview-grid" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTrade()">Save Trade</button>
+    </div>
+  </div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox()">
+  <button onclick="lbNav(-1,event)" style="position:fixed;left:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:none;color:#fff;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:8px;z-index:2001;">‹</button>
+  <img id="lightbox-img" src="" alt="Chart" style="max-width:90vw;max-height:90vh;border-radius:8px;">
+  <button onclick="lbNav(1,event)" style="position:fixed;right:20px;top:50%;transform:translateY(-50%);background:rgba(0,0,0,.6);border:none;color:#fff;font-size:28px;cursor:pointer;padding:10px 16px;border-radius:8px;z-index:2001;">›</button>
+  <div id="lb-counter" style="position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.6);color:#fff;font-size:12px;padding:5px 14px;border-radius:20px;"></div>
+</div>
+
+<!-- DAY DETAIL MODAL -->
+<div class="modal-overlay" id="day-modal-overlay" onclick="if(event.target===this)closeDayModal()">
+  <div class="modal" style="width:720px;">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title" id="day-modal-title">Trades on —</div>
+        <div style="font-size:12px;color:var(--muted);margin-top:2px;" id="day-modal-sub"></div>
+      </div>
+      <button class="modal-close" onclick="closeDayModal()">✕</button>
+    </div>
+    <div class="modal-body" style="padding:0;">
+      <div id="day-modal-body"></div>
+    </div>
+  </div>
+</div>
