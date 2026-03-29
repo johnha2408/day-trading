@@ -818,17 +818,15 @@
       <label>Username</label>
       <input type="text" id="login-username" placeholder="e.g. john"
         maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false"
-        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()"
-        onkeydown="if(event.key==='Enter')doLogin()">
+        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()">
     </div>
     <div class="login-field">
       <label>PIN (4–8 digits) <span style="color:var(--muted);font-weight:400;">— keeps your data private</span></label>
       <input type="password" id="login-pin" inputmode="numeric" placeholder="••••"
         maxlength="8" autocomplete="current-password"
-        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
-        onkeydown="if(event.key==='Enter')doLogin()">
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')">
     </div>
-    <button class="login-btn" id="login-btn" onclick="doLogin()">Enter Journal →</button>
+    <button class="login-btn" id="login-btn">Enter Journal →</button>
     <div class="login-status" id="login-status"></div>
 
     <!-- Recent accounts (from localStorage) -->
@@ -3143,3 +3141,34 @@ function calcRR() {
   const rr        = (rewardPts && riskPts) ? rewardPts / riskPts : null;
 
   // Dollar risk using capital + risk%
+  let dollarRisk = '—';
+  if (riskPct && initialCapital) {
+    dollarRisk = '$' + ((initialCapital * riskPct / 100)).toFixed(2);
+  }
+
+  const rrClass = rr === null ? '' : rr >= 2 ? 'good' : rr >= 1 ? 'warn' : 'bad';
+  document.getElementById('rr-ratio').innerHTML     = rr !== null
+    ? `<span class="rr-badge ${rr>=2?'rr-good':rr>=1?'rr-mid':'rr-bad'}">1:${rr.toFixed(2)}</span>` : '—';
+  document.getElementById('rr-risk-pts').innerHTML  = `<span class="risk-calc-val bad">${riskPts.toFixed(2)}</span>`;
+  document.getElementById('rr-reward-pts').innerHTML= rewardPts !== null
+    ? `<span class="risk-calc-val good">${rewardPts.toFixed(2)}</span>` : '—';
+  document.getElementById('rr-dollar-risk').innerHTML = `<span class="risk-calc-val ${rrClass}">${dollarRisk}</span>`;
+}
+
+// Hook entry/sl/tp changes to calcRR
+['f-entry','f-exit'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) el.addEventListener('input', calcRR);
+});
+
+// ===== INIT =====
+window.addEventListener('DOMContentLoaded', () => {
+  applyTheme();
+  renderRecentAccounts();
+
+  // Attach login handlers here — after all functions are defined
+  document.getElementById('login-btn')?.addEventListener('click', doLogin);
+  document.getElementById('login-username')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  document.getElementById('login-pin')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // Don't auto-load data — wait for login
