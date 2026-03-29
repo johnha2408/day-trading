@@ -695,6 +695,36 @@
   }
   .user-chip:hover { border-color: var(--accent); }
 
+  /* CUSTOM DATE RANGE PICKER */
+  .daterange-wrap {
+    display: inline-flex; align-items: center; gap: 0;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 7px; overflow: hidden; height: 30px;
+    transition: border-color .15s;
+  }
+  .daterange-wrap:focus-within { border-color: var(--accent); }
+  .daterange-wrap input[type=date] {
+    background: transparent; border: none; outline: none;
+    color: var(--text); font-family: 'Roboto', sans-serif;
+    font-size: 12px; font-weight: 500; padding: 0 8px;
+    cursor: pointer; height: 100%;
+    color-scheme: dark;
+  }
+  body.light .daterange-wrap input[type=date] { color-scheme: light; }
+  .daterange-sep { color: var(--muted); font-size: 12px; padding: 0 2px; line-height: 30px; }
+  .daterange-apply {
+    background: var(--accent); border: none; color: #0a0c10;
+    font-family: 'Roboto'; font-size: 11px; font-weight: 700;
+    padding: 0 10px; cursor: pointer; height: 100%;
+    transition: background .15s;
+  }
+  .daterange-apply:hover { background: #00ffb3; }
+  .period-label-custom {
+    font-size: 11px; color: var(--accent); font-weight: 600;
+    background: rgba(0,229,160,.1); border: 1px solid rgba(0,229,160,.25);
+    border-radius: 5px; padding: 2px 8px; white-space: nowrap;
+  }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -1067,6 +1097,8 @@ function isWin(t)  { return tradeResult(t) === 'WIN'; }
 function isLoss(t) { return tradeResult(t) === 'LOSS'; }
 let currentResult = 'WIN';
 let currentPeriod = 'day';
+let customRangeFrom = null; // Date object
+let customRangeTo   = null; // Date object
 let currentImages = [];
 let editIndex = -1;
 let sortKey = 'date';
@@ -1698,25 +1730,63 @@ function showPage(page, el) {
 // ===== PERIOD =====
 function setPeriod(p, el) {
   currentPeriod = p;
+  customRangeFrom = null;
+  customRangeTo   = null;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-  el.classList.add('active');
+  if (el) el.classList.add('active');
+  // Hide custom label
+  const lbl = document.getElementById('custom-range-label');
+  if (lbl) lbl.style.display = 'none';
   renderDashboard();
 }
 
-function filterByPeriod(trades) {
+function applyCustomRange() {
+  const fromEl = document.getElementById('range-from');
+  const toEl   = document.getElementById('range-to');
+  if (!fromEl?.value && !toEl?.value) return;
+
+  const from = fromEl?.value ? new Date(fromEl.value + 'T00:00:00') : null;
+  const to   = toEl?.value   ? new Date(toEl.value   + 'T23:59:59') : null;
+
+  // If only one date set, use it for both ends
+  customRangeFrom = from || to;
+  customRangeTo   = to   || from;
+
+  currentPeriod = 'custom';
+  document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
+
+  // Show label
+  const lbl = document.getElementById('custom-range-label');
+  if (lbl) {
+    const fmtD = d => d ? d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'2-digit' }) : '?';
+    lbl.textContent = fmtD(customRangeFrom) + ' – ' + fmtD(customRangeTo);
+    lbl.style.display = 'inline-flex';
+  }
+  renderDashboard();
+}
+
+function filterByPeriod(tradeList) {
   const now = new Date();
-  return trades.filter(t => {
+  return tradeList.filter(t => {
+    if (!t.date) return false;
     const d = new Date(t.date);
     if (currentPeriod === 'day') {
       return d.toDateString() === now.toDateString();
-    } else if (currentPeriod === 'week') {
+    }
+    if (currentPeriod === 'week') {
       const start = new Date(now); start.setDate(now.getDate() - now.getDay());
       start.setHours(0,0,0,0);
       return d >= start;
-    } else if (currentPeriod === 'month') {
+    }
+    if (currentPeriod === 'month') {
       return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
     }
-    return true;
+    if (currentPeriod === 'custom') {
+      const afterFrom = customRangeFrom ? d >= customRangeFrom : true;
+      const beforeTo  = customRangeTo   ? d <= customRangeTo   : true;
+      return afterFrom && beforeTo;
+    }
+    return true; // 'all'
   });
 }
 
@@ -2606,6 +2676,20 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-username')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-pin')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
 
+  // Init date range inputs: default from = start of month, to = today
+  const today = new Date();
+  const firstOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+  const toISO   = today.toISOString().slice(0,10);
+  const fromISO = firstOfMonth.toISOString().slice(0,10);
+  const fromEl = document.getElementById('range-from');
+  const toEl   = document.getElementById('range-to');
+  if (fromEl) fromEl.value = fromISO;
+  if (toEl)   toEl.value   = toISO;
+
+  // Enter key on date inputs applies range
+  fromEl?.addEventListener('keydown', e => { if (e.key === 'Enter') applyCustomRange(); });
+  toEl?.addEventListener('keydown',   e => { if (e.key === 'Enter') applyCustomRange(); });
+
   // Don't auto-load data — wait for login
 });
 // Don't call renderDashboard/renderTradeTable at startup — called after login
@@ -2707,12 +2791,20 @@ window.addEventListener('DOMContentLoaded', () => {
 
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
-        <div class="period-row">
-          <span style="font-size:12px;color:var(--muted);margin-right:4px;">Period:</span>
-          <button class="period-btn active" onclick="setPeriod('day', this)">Day</button>
-          <button class="period-btn" onclick="setPeriod('week', this)">Week</button>
-          <button class="period-btn" onclick="setPeriod('month', this)">Month</button>
-          <button class="period-btn" onclick="setPeriod('all', this)">All Time</button>
+        <div class="period-row" style="flex-wrap:wrap;gap:8px;align-items:center;">
+          <span style="font-size:12px;color:var(--muted);">Period:</span>
+          <button class="period-btn active" id="pbtn-day"   onclick="setPeriod('day',   this)">Day</button>
+          <button class="period-btn"        id="pbtn-week"  onclick="setPeriod('week',  this)">Week</button>
+          <button class="period-btn"        id="pbtn-month" onclick="setPeriod('month', this)">Month</button>
+          <button class="period-btn"        id="pbtn-all"   onclick="setPeriod('all',   this)">All Time</button>
+          <!-- Custom range -->
+          <div class="daterange-wrap" title="Custom date range">
+            <input type="date" id="range-from" title="From">
+            <span class="daterange-sep">→</span>
+            <input type="date" id="range-to" title="To">
+            <button class="daterange-apply" onclick="applyCustomRange()">Go</button>
+          </div>
+          <span id="custom-range-label" class="period-label-custom" style="display:none;"></span>
         </div>
 
         <div class="kpi-row" id="kpi-row"></div>
