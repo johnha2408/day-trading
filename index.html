@@ -8,6 +8,9 @@
 <link rel="apple-touch-icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 180 180'%3E%3Crect width='180' height='180' rx='40' fill='%230a0c10'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' font-size='110' font-family='Arial' fill='%2300e5a0'%3E📈%3C/text%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
 <style>
   :root {
     --bg: #0a0c10;
@@ -620,6 +623,78 @@
   }
   .sync-banner.show { display: flex; }
 
+  /* ===== LOGIN SCREEN ===== */
+  #login-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--bg);
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column; padding: 24px;
+  }
+  #login-screen.hidden { display: none; }
+  .login-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 18px; padding: 40px 36px; width: 100%; max-width: 420px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.5);
+  }
+  .login-logo { color: var(--accent); font-size: 32px; font-weight: 900; letter-spacing: -1px; margin-bottom: 4px; }
+  .login-sub { font-size: 12px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 32px; }
+  .login-title { font-size: 18px; font-weight: 700; margin-bottom: 6px; }
+  .login-desc { font-size: 13px; color: var(--muted); margin-bottom: 24px; line-height: 1.6; }
+  .login-field { margin-bottom: 14px; }
+  .login-field label { font-size: 11px; font-weight: 700; letter-spacing: .5px; text-transform: uppercase; color: var(--muted); display: block; margin-bottom: 6px; }
+  .login-field input {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 9px; color: var(--text); font-family: 'Roboto Mono', monospace;
+    font-size: 16px; font-weight: 600; padding: 12px 16px; outline: none;
+    transition: border-color .15s; letter-spacing: .5px;
+  }
+  .login-field input:focus { border-color: var(--accent); }
+  .login-field input::placeholder { color: var(--muted); font-weight: 400; }
+  .login-btn {
+    width: 100%; background: var(--accent); border: none; border-radius: 9px;
+    color: #0a0c10; font-family: 'Roboto'; font-size: 15px; font-weight: 800;
+    padding: 14px; cursor: pointer; margin-top: 8px; transition: background .15s;
+    letter-spacing: .3px;
+  }
+  .login-btn:hover { background: #00ffb3; }
+  .login-btn:disabled { opacity: .5; cursor: not-allowed; }
+  .login-status { font-size: 12px; margin-top: 10px; text-align: center; min-height: 18px; }
+  .login-status.err { color: var(--loss); }
+  .login-status.ok  { color: var(--win); }
+  .login-status.loading { color: var(--muted); }
+  .login-accounts { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 18px; }
+  .login-accounts-title { font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 10px; }
+  .login-account-chip {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 6px 14px; margin: 4px; cursor: pointer;
+    font-size: 13px; font-weight: 600; font-family: 'Roboto Mono';
+    transition: all .15s;
+  }
+  .login-account-chip:hover { border-color: var(--accent); color: var(--accent); }
+  .login-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; color: #0a0c10;
+  }
+  /* sync status indicator in topbar */
+  .sync-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--muted);
+    flex-shrink: 0; transition: background .3s;
+  }
+  .sync-dot.synced  { background: var(--win); box-shadow: 0 0 6px var(--win); }
+  .sync-dot.syncing { background: var(--warn); animation: pulse .8s infinite; }
+  .sync-dot.offline { background: var(--loss); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+  .user-chip {
+    display: flex; align-items: center; gap: 7px;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 4px 12px 4px 6px; cursor: pointer;
+    font-size: 12px; font-weight: 600; color: var(--text); transition: all .15s;
+  }
+  .user-chip:hover { border-color: var(--accent); }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -731,6 +806,39 @@
 </head>
 <body>
 
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">FX Journal</div>
+    <div class="login-sub">Trading Log v1.0</div>
+    <div class="login-title">Welcome back 👋</div>
+    <div class="login-desc">Enter your username to access your trading journal. Your data syncs across all devices automatically.</div>
+
+    <div class="login-field">
+      <label>Username</label>
+      <input type="text" id="login-username" placeholder="e.g. john"
+        maxlength="30" autocomplete="username" autocapitalize="none" spellcheck="false"
+        oninput="this.value=this.value.replace(/[^a-zA-Z0-9_]/g,'').toLowerCase()"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <div class="login-field">
+      <label>PIN (4–8 digits) <span style="color:var(--muted);font-weight:400;">— keeps your data private</span></label>
+      <input type="password" id="login-pin" inputmode="numeric" placeholder="••••"
+        maxlength="8" autocomplete="current-password"
+        oninput="this.value=this.value.replace(/[^0-9]/g,'')"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="login-btn" id="login-btn" onclick="doLogin()">Enter Journal →</button>
+    <div class="login-status" id="login-status"></div>
+
+    <!-- Recent accounts (from localStorage) -->
+    <div class="login-accounts" id="recent-accounts" style="display:none;">
+      <div class="login-accounts-title">Recent accounts</div>
+      <div id="recent-accounts-list"></div>
+    </div>
+  </div>
+</div>
+
 <div class="app">
   <div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
   <!-- SIDEBAR -->
@@ -781,6 +889,11 @@
         <div class="topbar-title" id="page-title">Dashboard</div>
       </div>
       <div class="topbar-actions">
+        <span class="sync-dot" id="sync-dot" title="Sync status"></span>
+        <div class="user-chip" onclick="logoutUser()" id="user-chip" title="Click to logout" style="display:none;">
+          <div class="login-avatar" id="user-avatar">?</div>
+          <span id="user-chip-name">—</span>
+        </div>
         <button class="theme-btn" id="theme-btn" onclick="toggleTheme()">🌙 Dark</button>
         <button class="btn btn-ghost" onclick="exportCSV()">⬇ Export CSV</button>
         <button class="btn btn-primary" onclick="openModal()">+ New Trade</button>
@@ -791,8 +904,19 @@
 
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
-        <!-- SYNC INFO BANNER -->
-        <div class="sync-banner" id="sync-banner">
+        <!-- FIREBASE SETUP NOTICE -->
+        <div class="sync-banner show" id="firebase-notice" style="background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.3);">
+          <span style="font-size:18px;">⚙️</span>
+          <div style="color:var(--warn);">
+            <strong>Firebase setup required for cloud sync.</strong>
+            To enable real sync: (1) Go to <a href="https://console.firebase.google.com" target="_blank" style="color:var(--accent2);">console.firebase.google.com</a>,
+            create a project, enable <strong>Realtime Database</strong>, add a Web App, then
+            replace the <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">FIREBASE_CONFIG</code> values in this file's JS with your own.
+            Set DB rules to: <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">{".read":"auth==null","users/{u}":{"data":{"pinhash":{".write":"true"}}}}</code>
+            — or for quick dev use <code style="background:var(--surface2);padding:1px 5px;border-radius:3px;">".read":true,".write":true</code>.
+            <a href="#" onclick="document.getElementById('firebase-notice').style.display='none';return false;" style="color:var(--accent2);margin-left:8px;">Dismiss</a>
+          </div>
+        </div>
           <span style="font-size:18px;">ℹ️</span>
           <div>
             <strong>Cross-device sync:</strong> Data is stored in your browser's localStorage — it is <strong>device & browser specific</strong>.
@@ -1243,27 +1367,256 @@
   </div>
 </div>
 <script>
-// ===== DATA STORE =====
-let trades = JSON.parse(localStorage.getItem('fxj_trades') || '[]');
-let initialCapital = parseFloat(localStorage.getItem('fxj_capital') || '0');
+// ===== FIREBASE CONFIG =====
+// ⚠️  Replace these values with your own Firebase project config
+// Get them at: https://console.firebase.google.com → Project Settings → Web app
+const FIREBASE_CONFIG = {
+  apiKey: "AIzaSyCGxwUZzl2X77WHhiCJ9HTJU2IASXDaWfk",
+  authDomain: "fotrad-c172e.firebaseapp.com",
+  databaseURL: "https://fotrad-c172e-default-rtdb.firebaseio.com",
+  projectId: "fotrad-c172e",
+  storageBucket: "fotrad-c172e.firebasestorage.app",
+  messagingSenderId: "914370658193",
+  appId: "1:914370658193:web:7266ee11122b0bd0e5e430",
+  measurementId: "G-TRQV16KR16"
+};
+
+let firebaseApp = null;
+let db = null;
+let currentUser = null; // { username, pinHash }
+let userDbRef = null;
+let syncListenerAttached = false;
+
+function initFirebase() {
+  try {
+    if (!firebase.apps.length) {
+      firebaseApp = firebase.initializeApp(FIREBASE_CONFIG);
+    } else {
+      firebaseApp = firebase.app();
+    }
+    db = firebase.database();
+    return true;
+  } catch(e) {
+    console.warn('Firebase init failed:', e);
+    return false;
+  }
+}
+
+// Simple PIN hash (SHA-256 not available without crypto, use btoa as lightweight hash)
+async function hashPin(pin) {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pin));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ===== LOGIN =====
+async function doLogin() {
+  const username = document.getElementById('login-username').value.trim().toLowerCase();
+  const pin = document.getElementById('login-pin').value.trim();
+  const status = document.getElementById('login-status');
+  const btn = document.getElementById('login-btn');
+
+  if (!username) { setLoginStatus('Please enter a username', 'err'); return; }
+  if (username.length < 2) { setLoginStatus('Username must be at least 2 characters', 'err'); return; }
+  if (!pin || pin.length < 4) { setLoginStatus('PIN must be 4–8 digits', 'err'); return; }
+
+  btn.disabled = true;
+  setLoginStatus('Connecting...', 'loading');
+
+  const fbOk = initFirebase();
+  if (!fbOk) {
+    // Fallback: localStorage only mode
+    setLoginStatus('Cloud sync unavailable — using local mode', 'err');
+    setTimeout(() => loginLocalMode(username, pin), 800);
+    return;
+  }
+
+  try {
+    const pinHash = await hashPin(username + ':' + pin);
+    const userRef = db.ref('users/' + username);
+    const snap = await userRef.once('value');
+
+    if (!snap.exists()) {
+      // New account — create it
+      await userRef.set({ pinHash, createdAt: Date.now() });
+      setLoginStatus('✓ Account created! Welcome ' + username, 'ok');
+    } else {
+      // Existing account — verify PIN
+      const stored = snap.val();
+      if (stored.pinHash !== pinHash) {
+        setLoginStatus('Wrong PIN. Try again.', 'err');
+        btn.disabled = false;
+        return;
+      }
+      setLoginStatus('✓ Welcome back, ' + username + '!', 'ok');
+    }
+
+    currentUser = { username, pinHash };
+    saveRecentAccount(username);
+    setTimeout(() => enterApp(username), 600);
+
+  } catch(e) {
+    console.error('Login error:', e);
+    setLoginStatus('Connection failed — using local mode', 'err');
+    setTimeout(() => loginLocalMode(username, pin), 800);
+  }
+}
+
+function loginLocalMode(username, pin) {
+  currentUser = { username, pinHash: null, localOnly: true };
+  saveRecentAccount(username);
+  enterApp(username);
+}
+
+function setLoginStatus(msg, type) {
+  const el = document.getElementById('login-status');
+  el.textContent = msg;
+  el.className = 'login-status ' + type;
+}
+
+function enterApp(username) {
+  // Update UI
+  document.getElementById('login-screen').classList.add('hidden');
+  const chip = document.getElementById('user-chip');
+  const av   = document.getElementById('user-avatar');
+  const name = document.getElementById('user-chip-name');
+  chip.style.display = 'flex';
+  av.textContent = username[0].toUpperCase();
+  name.textContent = username;
+
+  // Attach Firebase listener for realtime sync
+  if (db && !currentUser?.localOnly) {
+    userDbRef = db.ref('data/' + username);
+    attachSyncListener();
+  } else {
+    // Load from localStorage
+    loadFromLocalStorage(username);
+    setSyncDot('offline');
+  }
+}
+
+function attachSyncListener() {
+  if (syncListenerAttached) return;
+  syncListenerAttached = true;
+  setSyncDot('syncing');
+
+  userDbRef.on('value', snap => {
+    const data = snap.val() || {};
+    trades         = data.trades         ? JSON.parse(data.trades)     : [];
+    strategies     = data.strategies     ? JSON.parse(data.strategies) : [...DEFAULT_STRATEGIES];
+    initialCapital = data.capital        ? parseFloat(data.capital)    : 0;
+
+    // Update UI
+    const capInp = document.getElementById('capital-input');
+    if (capInp && initialCapital) capInp.value = initialCapital;
+    populateStrategySelect();
+    renderDashboard();
+    renderTradeTable();
+    renderCapitalReturn();
+    setSyncDot('synced');
+  }, err => {
+    console.error('Sync error:', err);
+    setSyncDot('offline');
+  });
+}
+
+function setSyncDot(state) {
+  const dot = document.getElementById('sync-dot');
+  if (!dot) return;
+  dot.className = 'sync-dot ' + state;
+  const labels = { synced: 'Synced ✓', syncing: 'Syncing...', offline: 'Offline (local only)' };
+  dot.title = labels[state] || state;
+}
+
+// ===== CLOUD SAVE =====
+function cloudSave() {
+  if (!db || !currentUser || currentUser.localOnly) {
+    // localStorage fallback
+    localStorage.setItem('fxj_trades_' + (currentUser?.username||'default'), JSON.stringify(trades));
+    localStorage.setItem('fxj_strategies_' + (currentUser?.username||'default'), JSON.stringify(strategies));
+    localStorage.setItem('fxj_capital_' + (currentUser?.username||'default'), initialCapital);
+    return;
+  }
+  setSyncDot('syncing');
+  userDbRef.update({
+    trades:     JSON.stringify(trades),
+    strategies: JSON.stringify(strategies),
+    capital:    initialCapital,
+    updatedAt:  Date.now()
+  }).then(() => setSyncDot('synced'))
+    .catch(e => { console.error('Save error:', e); setSyncDot('offline'); });
+}
+
+function loadFromLocalStorage(username) {
+  const key = username || 'default';
+  trades         = JSON.parse(localStorage.getItem('fxj_trades_' + key) || localStorage.getItem('fxj_trades') || '[]');
+  strategies     = JSON.parse(localStorage.getItem('fxj_strategies_' + key) || localStorage.getItem('fxj_strategies') || 'null') || [...DEFAULT_STRATEGIES];
+  initialCapital = parseFloat(localStorage.getItem('fxj_capital_' + key) || localStorage.getItem('fxj_capital') || '0');
+  const capInp = document.getElementById('capital-input');
+  if (capInp && initialCapital) capInp.value = initialCapital;
+  populateStrategySelect();
+  renderDashboard();
+  renderTradeTable();
+  renderCapitalReturn();
+}
+
+// ===== LOGOUT =====
+function logoutUser() {
+  if (!confirm('Log out of ' + (currentUser?.username || 'account') + '?')) return;
+  if (userDbRef) { userDbRef.off(); userDbRef = null; }
+  syncListenerAttached = false;
+  currentUser = null;
+  trades = []; strategies = [...DEFAULT_STRATEGIES]; initialCapital = 0;
+  document.getElementById('login-screen').classList.remove('hidden');
+  document.getElementById('user-chip').style.display = 'none';
+  document.getElementById('login-username').value = '';
+  document.getElementById('login-pin').value = '';
+  document.getElementById('login-btn').disabled = false;
+  setLoginStatus('', '');
+  renderRecentAccounts();
+}
+
+// ===== RECENT ACCOUNTS =====
+function saveRecentAccount(username) {
+  let recent = JSON.parse(localStorage.getItem('fxj_recent_accounts') || '[]');
+  recent = [username, ...recent.filter(u => u !== username)].slice(0, 5);
+  localStorage.setItem('fxj_recent_accounts', JSON.stringify(recent));
+}
+
+function renderRecentAccounts() {
+  const recent = JSON.parse(localStorage.getItem('fxj_recent_accounts') || '[]');
+  const wrap = document.getElementById('recent-accounts');
+  const list = document.getElementById('recent-accounts-list');
+  if (!recent.length) { wrap.style.display = 'none'; return; }
+  wrap.style.display = 'block';
+  list.innerHTML = recent.map(u => `
+    <span class="login-account-chip" onclick="quickLogin('${u}')">
+      <div class="login-avatar" style="width:22px;height:22px;font-size:10px;">${u[0].toUpperCase()}</div>
+      ${u}
+    </span>`).join('');
+}
+
+function quickLogin(username) {
+  document.getElementById('login-username').value = username;
+  document.getElementById('login-pin').focus();
+}
+
+// ===== DATA STORE (runtime vars — loaded from cloud after login) =====
+let trades = [];
+let initialCapital = 0;
 
 const DEFAULT_STRATEGIES = [
   'SMC (Smart Money Concepts)','Order Block','Fair Value Gap','Breaker Block',
   'Liquidity Sweep','Supply & Demand','Volume Profile','VSA (Volume Spread Analysis)',
   'Wyckoff','Breakout','Trend Following','Scalping','News Trading','Other'
 ];
-let strategies = JSON.parse(localStorage.getItem('fxj_strategies') || 'null');
-if (!strategies) {
-  strategies = [...DEFAULT_STRATEGIES];
-  localStorage.setItem('fxj_strategies', JSON.stringify(strategies));
-}
+let strategies = [...DEFAULT_STRATEGIES];
 
 let activeStrategyName = null;
 let stratPnlChart = null, stratSessionChart = null;
 let currentSide = 'BUY';
 let currentResult = 'WIN';
 let currentPeriod = 'day';
-let currentImages = []; // array of base64 strings
+let currentImages = [];
 let editIndex = -1;
 let sortKey = 'date';
 let sortDir = -1;
@@ -1774,7 +2127,7 @@ function renderCalSummary(pnl, trades, wins, activeDays, label) {
 function saveCapital() {
   const v = parseFloat(document.getElementById('capital-input').value) || 0;
   initialCapital = v;
-  localStorage.setItem('fxj_capital', v);
+  cloudSave();
   renderCapitalReturn();
   renderDashboard();
 }
@@ -2333,7 +2686,7 @@ function saveTrade() {
   if (!trade.date || !trade.pair) { alert('Please fill in Date and Pair.'); return; }
   if (editIndex >= 0) trades[editIndex] = trade;
   else trades.push(trade);
-  localStorage.setItem('fxj_trades', JSON.stringify(trades));
+  cloudSave();
   closeModal();
   renderDashboard();
   renderTradeTable();
@@ -2348,7 +2701,7 @@ function saveTrade() {
 function deleteTrade(idx) {
   if (!confirm('Delete this trade?')) return;
   trades.splice(idx, 1);
-  localStorage.setItem('fxj_trades', JSON.stringify(trades));
+  cloudSave();
   renderDashboard();
   renderTradeTable();
 }
@@ -2396,7 +2749,7 @@ function fmtDateTime(d) {
 
 // ===== STRATEGY MANAGEMENT =====
 function saveStrategies() {
-  localStorage.setItem('fxj_strategies', JSON.stringify(strategies));
+  cloudSave();
 }
 
 function populateStrategySelect() {
@@ -2700,7 +3053,7 @@ function editStrategyName(oldName) {
   strategies[idx] = trimmed;
   // Update all trades with old strategy name
   trades.forEach(t => { if (t.strategy === oldName) t.strategy = trimmed; });
-  localStorage.setItem('fxj_trades', JSON.stringify(trades));
+  cloudSave();
   saveStrategies();
   populateStrategySelect();
   renderStratList();
@@ -2782,21 +3135,11 @@ function calcRR() {
 // ===== INIT =====
 window.addEventListener('DOMContentLoaded', () => {
   applyTheme();
-  populateStrategySelect();
-  updatePriceHints();
-  const inp = document.getElementById('capital-input');
-  if (inp && initialCapital) inp.value = initialCapital;
-  renderCapitalReturn();
-  // Show sync info banner once
-  if (!localStorage.getItem('fxj_sync_dismissed')) {
-    document.getElementById('sync-banner')?.classList.add('show');
-  }
-  document.querySelector('[href="#"]')?.addEventListener('click', () => {
-    localStorage.setItem('fxj_sync_dismissed','1');
-  });
+  renderRecentAccounts();
+  // Don't auto-load data — wait for login
+  // (login screen is shown by default via CSS)
 });
-renderDashboard();
-renderTradeTable();
+// Don't call renderDashboard/renderTradeTable at startup — called after login
 </script>
 </body>
 </html>
