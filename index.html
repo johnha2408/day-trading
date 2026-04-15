@@ -807,6 +807,22 @@
     display: none;
   }
 
+  /* ===== SLTP MODE TOGGLE & PIP PRESETS ===== */
+  .sltp-mode-btn {
+    padding: 4px 12px; font-size: 11px; font-weight: 600;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-family: 'Roboto'; transition: all .15s;
+  }
+  .sltp-mode-btn.active { background: var(--accent); color: #0a0c10; border-radius: 5px; }
+  .pip-preset-btn {
+    padding: 3px 10px; font-size: 11px; font-weight: 600;
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 5px; color: var(--loss); cursor: pointer;
+    font-family: 'Roboto Mono'; transition: all .1s;
+    border-color: rgba(244,63,94,.3);
+  }
+  .pip-preset-btn:hover { background: rgba(244,63,94,.12); border-color: var(--loss); }
+
   /* ===== TRADE JOURNAL TABS ===== */
   .journal-tabs {
     display: flex; gap: 0; margin-bottom: 0;
@@ -2631,6 +2647,8 @@ function openModal() {
   document.getElementById('f-sl').value = '';
   document.getElementById('f-tp').value = '';
   document.getElementById('f-risk-pct').value = '';
+  sltpMode = 'price';
+  setSltpMode('price');
   document.getElementById('f-strategy').value = '';
   document.getElementById('f-session').value = '';
   clearJournalNote();
@@ -2693,6 +2711,10 @@ function setResult(r) {
 
 function saveTrade() {
   syncJournalNote(); // merge 3 journal tabs → f-note hidden field
+  // Sync pip mode values to main fields
+  if (sltpMode === 'pip') syncPriceFromPip();
+  const riskPipEl = document.getElementById('f-risk-pct-pip');
+  if (sltpMode === 'pip' && riskPipEl?.value) document.getElementById('f-risk-pct').value = riskPipEl.value;
   const pnlRaw = parseFloat(document.getElementById('f-pnl').value);
   const pnlVal = isNaN(pnlRaw) ? null : pnlRaw;
 
@@ -3477,33 +3499,193 @@ function calcRRValue(t) {
   return reward / risk;
 }
 
-function calcRR() {
-  const entry   = parseFloat(document.getElementById('f-entry').value);
-  const sl      = parseFloat(document.getElementById('f-sl').value);
-  const tp      = parseFloat(document.getElementById('f-tp').value);
-  const riskPct = parseFloat(document.getElementById('f-risk-pct').value);
-  const disp    = document.getElementById('rr-display');
+// ===== SL/TP MODE (price vs pip) =====
+let sltpMode = 'price';
 
-  if (!entry || !sl) { disp.style.display = 'none'; return; }
+function setSltpMode(mode) {
+  sltpMode = mode;
+  document.getElementById('sltp-mode-price').classList.toggle('active', mode === 'price');
+  document.getElementById('sltp-mode-pip').classList.toggle('active', mode === 'pip');
+  document.getElementById('sltp-price-mode').style.display = mode === 'price' ? '' : 'none';
+  document.getElementById('sltp-pip-mode').style.display   = mode === 'pip'   ? '' : 'none';
+  if (mode === 'pip') syncPipFromPrice();
+  calcRR();
+}
+
+function getPipSize() {
+  const pair = document.getElementById('f-pair')?.value || 'XAU/USD';
+  const cfg = getPairConfig(pair);
+  // pip size: for XAU/USD = 0.01, JPY = 0.01, standard forex = 0.0001
+  if (pair.includes('XAU') || pair.includes('XAG')) return 0.01;
+  if (pair.includes('JPY')) return 0.01;
+  return 0.0001;
+}
+
+function setSlPip(pips) {
+  document.getElementById('f-sl-pip').value = pips;
+  syncPriceFromPip(); calcRR();
+}
+function setTpPip(pips) {
+  document.getElementById('f-tp-pip').value = pips;
+  syncPriceFromPip(); calcRR();
+}
+
+function syncPriceFromPip() {
+  const entry   = parseFloat(document.getElementById('f-entry').value);
+  const slPips  = parseFloat(document.getElementById('f-sl-pip')?.value);
+  const tpPips  = parseFloat(document.getElementById('f-tp-pip')?.value);
+  const side    = document.getElementById('opt-buy')?.classList.contains('active') ? 'BUY' : 'SELL';
+  const pip     = getPipSize();
+  const cfg     = getPairConfig(document.getElementById('f-pair')?.value || 'XAU/USD');
+
+  if (!entry) return;
+
+  const slPrice = !isNaN(slPips) ? (side === 'BUY' ? entry - slPips * pip : entry + slPips * pip) : null;
+  const tpPrice = !isNaN(tpPips) ? (side === 'BUY' ? entry + tpPips * pip : entry - tpPips * pip) : null;
+
+  if (slPrice !== null) document.getElementById('f-sl').value = slPrice.toFixed(cfg.decimals);
+  if (tpPrice !== null) document.getElementById('f-tp').value = tpPrice.toFixed(cfg.decimals);
+
+  // Show price preview
+  const prev = document.getElementById('pip-price-preview');
+  if (prev) {
+    prev.style.display = (slPrice || tpPrice) ? 'block' : 'none';
+    if (slPrice) document.getElementById('pip-sl-price').textContent = slPrice.toFixed(cfg.decimals);
+    if (tpPrice) document.getElementById('pip-tp-price').textContent = tpPrice.toFixed(cfg.decimals);
+  }
+
+  // Sync risk% across both modes
+  const riskPip = document.getElementById('f-risk-pct-pip')?.value;
+  if (riskPip) document.getElementById('f-risk-pct').value = riskPip;
+}
+
+function syncPipFromPrice() {
+  const entry  = parseFloat(document.getElementById('f-entry').value);
+  const sl     = parseFloat(document.getElementById('f-sl').value);
+  const tp     = parseFloat(document.getElementById('f-tp').value);
+  const pip    = getPipSize();
+  if (!entry) return;
+  if (!isNaN(sl) && document.getElementById('f-sl-pip')) {
+    document.getElementById('f-sl-pip').value = Math.round(Math.abs(entry - sl) / pip);
+  }
+  if (!isNaN(tp) && document.getElementById('f-tp-pip')) {
+    document.getElementById('f-tp-pip').value = Math.round(Math.abs(tp - entry) / pip);
+  }
+}
+
+function autoCalcLot() {
+  // Suggest lot size from risk% and SL distance
+  const entry    = parseFloat(document.getElementById('f-entry').value);
+  const sl       = parseFloat(document.getElementById('f-sl').value);
+  const riskPct  = parseFloat(document.getElementById('f-risk-pct')?.value || document.getElementById('f-risk-pct-pip')?.value);
+  if (!entry || !sl || !riskPct || !initialCapital) return;
+  const riskDollar  = initialCapital * riskPct / 100;
+  const slDistance  = Math.abs(entry - sl);
+  const pair        = document.getElementById('f-pair')?.value || 'XAU/USD';
+  // Pip value per 0.01 lot: XAU ≈ $0.10/pip/0.01lot, standard forex ≈ $0.10/pip/0.01lot
+  const pipSize     = getPipSize();
+  const pipVal0_01  = pair.includes('XAU') ? 0.1 : pair.includes('JPY') ? 0.1 : 0.1;
+  const slPips      = slDistance / pipSize;
+  const dollarPerLot = slPips * pipVal0_01 * 100; // per 1.0 lot
+  const suggestedLot = riskDollar / dollarPerLot;
+  const el = document.getElementById('rr-lot-suggest');
+  if (el && suggestedLot > 0 && isFinite(suggestedLot)) {
+    el.textContent = suggestedLot.toFixed(2) + ' lot';
+    el.style.cursor = 'pointer';
+    el.title = 'Click to apply';
+    el.onclick = () => {
+      document.getElementById('f-lot').value = suggestedLot.toFixed(2);
+      el.textContent = '✓ ' + suggestedLot.toFixed(2) + ' lot';
+      setTimeout(() => { el.textContent = suggestedLot.toFixed(2) + ' lot'; }, 1200);
+    };
+  }
+}
+
+function updateSltpVisual(entry, sl, tp) {
+  const vis = document.getElementById('sltp-visual');
+  const wrap = document.getElementById('sltp-bar-wrap');
+  if (!entry || !sl || !vis || !wrap) { vis.style.display = 'none'; return; }
+
+  vis.style.display = 'block';
+  document.getElementById('bar-entry-val').textContent = entry;
+  document.getElementById('bar-sl-val').textContent    = sl || '—';
+  document.getElementById('bar-tp-val').textContent    = tp || '—';
+
+  if (!sl) return;
+  const min  = Math.min(sl, entry, tp || entry);
+  const max  = Math.max(sl, entry, tp || entry);
+  const span = max - min || 1;
+
+  const pct = v => ((v - min) / span * 100).toFixed(1) + '%';
+
+  const side = document.getElementById('opt-buy')?.classList.contains('active') ? 'BUY' : 'SELL';
+  const slPct    = parseFloat(pct(sl));
+  const entryPct = parseFloat(pct(entry));
+  const tpPct    = tp ? parseFloat(pct(tp)) : null;
+
+  // Build bar
+  let html = '<div style="position:relative;height:24px;background:var(--surface2);border-radius:6px;overflow:hidden;">';
+
+  // Loss zone (SL to Entry)
+  const lossL = Math.min(slPct, entryPct);
+  const lossW = Math.abs(entryPct - slPct);
+  html += `<div style="position:absolute;left:${lossL}%;width:${lossW}%;height:100%;background:rgba(244,63,94,.2);"></div>`;
+
+  // Win zone (Entry to TP)
+  if (tpPct !== null) {
+    const winL = Math.min(entryPct, tpPct);
+    const winW = Math.abs(tpPct - entryPct);
+    html += `<div style="position:absolute;left:${winL}%;width:${winW}%;height:100%;background:rgba(34,197,94,.2);"></div>`;
+  }
+
+  // Markers
+  html += `<div title="SL" style="position:absolute;left:${slPct}%;top:0;width:2px;height:100%;background:var(--loss);"></div>`;
+  html += `<div title="Entry" style="position:absolute;left:${entryPct}%;top:0;width:2px;height:100%;background:var(--accent2);"></div>`;
+  if (tpPct !== null)
+    html += `<div title="TP" style="position:absolute;left:${tpPct}%;top:0;width:2px;height:100%;background:var(--win);"></div>`;
+
+  html += '</div>';
+
+  // RR ratio label above bar
+  if (tp) {
+    const riskD = Math.abs(entry - sl);
+    const rewD  = Math.abs(tp - entry);
+    const rr    = riskD ? (rewD/riskD).toFixed(1) : '—';
+    const rrColor = parseFloat(rr) >= 2 ? 'var(--win)' : parseFloat(rr) >= 1 ? 'var(--warn)' : 'var(--loss)';
+    html = `<div style="text-align:right;font-size:11px;color:${rrColor};font-family:'Roboto Mono';font-weight:700;margin-bottom:4px;">R:R 1:${rr}</div>` + html;
+  }
+
+  wrap.innerHTML = html;
+}
+
+function calcRR() {
+  const entry    = parseFloat(document.getElementById('f-entry').value);
+  const sl       = parseFloat(document.getElementById('f-sl').value);
+  const tp       = parseFloat(document.getElementById('f-tp').value);
+  const riskPct  = parseFloat(document.getElementById('f-risk-pct')?.value || document.getElementById('f-risk-pct-pip')?.value);
+  const disp     = document.getElementById('rr-display');
+
+  if (!entry || !sl) { disp.style.display = 'none'; document.getElementById('sltp-visual').style.display = 'none'; return; }
   disp.style.display = 'block';
 
   const riskPts   = Math.abs(entry - sl);
   const rewardPts = tp ? Math.abs(tp - entry) : null;
   const rr        = (rewardPts && riskPts) ? rewardPts / riskPts : null;
 
-  // Dollar risk using capital + risk%
   let dollarRisk = '—';
   if (riskPct && initialCapital) {
-    dollarRisk = '$' + ((initialCapital * riskPct / 100)).toFixed(2);
+    dollarRisk = '$' + (initialCapital * riskPct / 100).toFixed(2);
   }
 
-  const rrClass = rr === null ? '' : rr >= 2 ? 'good' : rr >= 1 ? 'warn' : 'bad';
-  document.getElementById('rr-ratio').innerHTML     = rr !== null
+  document.getElementById('rr-ratio').innerHTML      = rr !== null
     ? `<span class="rr-badge ${rr>=2?'rr-good':rr>=1?'rr-mid':'rr-bad'}">1:${rr.toFixed(2)}</span>` : '—';
-  document.getElementById('rr-risk-pts').innerHTML  = `<span class="risk-calc-val bad">${riskPts.toFixed(2)}</span>`;
-  document.getElementById('rr-reward-pts').innerHTML= rewardPts !== null
-    ? `<span class="risk-calc-val good">${rewardPts.toFixed(2)}</span>` : '—';
-  document.getElementById('rr-dollar-risk').innerHTML = `<span class="risk-calc-val ${rrClass}">${dollarRisk}</span>`;
+  document.getElementById('rr-risk-pts').innerHTML   = `<span style="color:var(--loss);font-weight:700;">${riskPts.toFixed(2)}</span>`;
+  document.getElementById('rr-reward-pts').innerHTML = rewardPts !== null
+    ? `<span style="color:var(--win);font-weight:700;">${rewardPts.toFixed(2)}</span>` : '—';
+  document.getElementById('rr-dollar-risk').innerHTML = `<span style="color:var(--warn);font-weight:700;">${dollarRisk}</span>`;
+
+  autoCalcLot();
+  updateSltpVisual(entry, sl, tp);
 }
 
 // Hook entry/sl/tp changes to calcRR
@@ -4065,56 +4247,122 @@ window.addEventListener('DOMContentLoaded', async () => {
       <!-- RISK MANAGEMENT PANEL -->
       <div class="risk-panel">
         <div class="risk-panel-title">⚡ Risk Management</div>
-        <div class="form-row-3" style="margin-bottom:10px;">
-          <div class="form-group">
-            <label class="form-label">Stop Loss</label>
-            <div style="display:flex;gap:0;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-sl"
-                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(244,63,94,.3);"
-                oninput="sanitizePriceInput(this);calcRR()"
-                onkeydown="priceKeydown(event,'f-sl')">
-              <button type="button" onclick="openNumpad('f-sl','Stop Loss')"
-                style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--loss);cursor:pointer;font-size:14px;flex-shrink:0;"
-                title="Open numpad">⌨</button>
-            </div>
-            <div class="price-hint" id="hint-sl"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Take Profit</label>
-            <div style="display:flex;gap:0;">
-              <input type="text" inputmode="decimal" class="form-input" id="f-tp"
-                placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(34,197,94,.3);"
-                oninput="sanitizePriceInput(this);calcRR()"
-                onkeydown="priceKeydown(event,'f-tp')">
-              <button type="button" onclick="openNumpad('f-tp','Take Profit')"
-                style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--win);cursor:pointer;font-size:14px;flex-shrink:0;"
-                title="Open numpad">⌨</button>
-            </div>
-            <div class="price-hint" id="hint-tp"></div>
-          </div>
-          <div class="form-group">
-            <label class="form-label">Risk % of Capital</label>
-            <input type="number" class="form-input" id="f-risk-pct" placeholder="e.g. 1" step="0.1" min="0" max="100" style="font-family:'Roboto Mono';" oninput="calcRR()">
+
+        <!-- SL/TP INPUT MODE TOGGLE -->
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px;">
+          <span style="font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px;">SL/TP mode:</span>
+          <div style="display:flex;background:var(--bg);border-radius:6px;border:1px solid var(--border);overflow:hidden;">
+            <button id="sltp-mode-price" class="sltp-mode-btn active" onclick="setSltpMode('price')">Price</button>
+            <button id="sltp-mode-pip" class="sltp-mode-btn" onclick="setSltpMode('pip')">Pips</button>
           </div>
         </div>
-        <!-- LIVE RR CALCULATOR -->
+
+        <!-- PRICE MODE -->
+        <div id="sltp-price-mode">
+          <div class="form-row-3" style="margin-bottom:10px;">
+            <div class="form-group">
+              <label class="form-label">Stop Loss</label>
+              <div style="display:flex;gap:0;">
+                <input type="text" inputmode="decimal" class="form-input" id="f-sl"
+                  placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(244,63,94,.3);"
+                  oninput="sanitizePriceInput(this);calcRR();syncPipFromPrice()"
+                  onkeydown="priceKeydown(event,'f-sl')">
+                <button type="button" onclick="openNumpad('f-sl','Stop Loss')"
+                  style="background:rgba(244,63,94,.1);border:1px solid rgba(244,63,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--loss);cursor:pointer;font-size:14px;flex-shrink:0;"
+                  title="Open numpad">⌨</button>
+              </div>
+              <div class="price-hint" id="hint-sl"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Take Profit</label>
+              <div style="display:flex;gap:0;">
+                <input type="text" inputmode="decimal" class="form-input" id="f-tp"
+                  placeholder="" style="font-family:'Roboto Mono';border-radius:7px 0 0 7px;flex:1;border-color:rgba(34,197,94,.3);"
+                  oninput="sanitizePriceInput(this);calcRR();syncPipFromPrice()"
+                  onkeydown="priceKeydown(event,'f-tp')">
+                <button type="button" onclick="openNumpad('f-tp','Take Profit')"
+                  style="background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3);border-left:none;border-radius:0 7px 7px 0;padding:0 10px;color:var(--win);cursor:pointer;font-size:14px;flex-shrink:0;"
+                  title="Open numpad">⌨</button>
+              </div>
+              <div class="price-hint" id="hint-tp"></div>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Risk % of Capital</label>
+              <input type="number" class="form-input" id="f-risk-pct" placeholder="e.g. 1" step="0.1" min="0" max="100" style="font-family:'Roboto Mono';" oninput="calcRR();autoCalcLot()">
+            </div>
+          </div>
+        </div>
+
+        <!-- PIP MODE -->
+        <div id="sltp-pip-mode" style="display:none;">
+          <div class="form-row-3" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label class="form-label" style="color:var(--loss);">SL — pips below entry</label>
+              <input type="number" class="form-input" id="f-sl-pip" placeholder="e.g. 20" min="0" step="1"
+                style="font-family:'Roboto Mono';border-color:rgba(244,63,94,.3);"
+                oninput="syncPriceFromPip();calcRR()">
+            </div>
+            <div class="form-group">
+              <label class="form-label" style="color:var(--win);">TP — pips above entry</label>
+              <input type="number" class="form-input" id="f-tp-pip" placeholder="e.g. 40" min="0" step="1"
+                style="font-family:'Roboto Mono';border-color:rgba(34,197,94,.3);"
+                oninput="syncPriceFromPip();calcRR()">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Risk % of Capital</label>
+              <input type="number" class="form-input" id="f-risk-pct-pip" placeholder="e.g. 1" step="0.1" min="0" max="100"
+                style="font-family:'Roboto Mono';" oninput="calcRR();autoCalcLot()">
+            </div>
+          </div>
+          <!-- Quick pip presets -->
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
+            <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px;">Quick SL:</span>
+            ${[10,15,20,25,30,50].map(p => `<button type="button" class="pip-preset-btn" onclick="setSlPip(${p})">${p}</button>`).join('')}
+          </div>
+          <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
+            <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px;">Quick TP:</span>
+            ${[20,30,40,50,60,100].map(p => `<button type="button" class="pip-preset-btn" onclick="setTpPip(${p})" style="color:var(--win);border-color:rgba(34,197,94,.3);">${p}</button>`).join('')}
+          </div>
+          <!-- Synced price display -->
+          <div id="pip-price-preview" style="display:none;font-size:11px;color:var(--muted);background:var(--bg);padding:6px 10px;border-radius:6px;font-family:'Roboto Mono';">
+            SL: <span id="pip-sl-price" style="color:var(--loss);">—</span> &nbsp;|&nbsp;
+            TP: <span id="pip-tp-price" style="color:var(--win);">—</span>
+          </div>
+        </div>
+
+        <!-- VISUAL SL/TP BAR -->
+        <div id="sltp-visual" style="display:none;margin:12px 0 10px;padding:10px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border);">
+          <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--muted);margin-bottom:8px;">Price Ladder</div>
+          <div id="sltp-bar-wrap" style="position:relative;height:56px;"></div>
+          <div style="display:flex;justify-content:space-between;margin-top:4px;font-size:11px;font-family:'Roboto Mono';">
+            <span style="color:var(--loss);">SL <span id="bar-sl-val">—</span></span>
+            <span style="color:var(--muted);">Entry <span id="bar-entry-val">—</span></span>
+            <span style="color:var(--win);">TP <span id="bar-tp-val">—</span></span>
+          </div>
+        </div>
+
+        <!-- LIVE RR + LOT CALCULATOR -->
         <div id="rr-display" style="display:none;background:var(--bg);border-radius:7px;padding:10px 14px;">
-          <div style="display:flex;gap:20px;flex-wrap:wrap;">
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">R:R Ratio</span>
+          <div style="display:flex;gap:12px;flex-wrap:wrap;">
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:100px;">
+              <span class="risk-calc-label">R:R</span>
               <span class="risk-calc-val" id="rr-ratio">—</span>
             </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">Risk (pts)</span>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:100px;">
+              <span class="risk-calc-label">Risk pts</span>
               <span class="risk-calc-val" id="rr-risk-pts">—</span>
             </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
-              <span class="risk-calc-label">Reward (pts)</span>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:100px;">
+              <span class="risk-calc-label">Reward pts</span>
               <span class="risk-calc-val" id="rr-reward-pts">—</span>
             </div>
-            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:120px;">
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:100px;">
               <span class="risk-calc-label">$ at Risk</span>
               <span class="risk-calc-val" id="rr-dollar-risk">—</span>
+            </div>
+            <div class="risk-calc-row" style="border:none;padding:0;gap:8px;flex:1;min-width:100px;">
+              <span class="risk-calc-label">Suggested Lot</span>
+              <span class="risk-calc-val" id="rr-lot-suggest" style="color:var(--accent);">—</span>
             </div>
           </div>
         </div>
