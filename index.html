@@ -793,6 +793,152 @@
     display: none;
   }
 
+  /* ===== TRADE DETAIL PAGE ===== */
+  #trade-detail-overlay {
+    position: fixed; inset: 0; z-index: 2000;
+    background: var(--bg);
+    display: none; flex-direction: column;
+    overflow-y: auto;
+  }
+  #trade-detail-overlay.open { display: flex; }
+
+  .td-topbar {
+    position: sticky; top: 0; z-index: 10;
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0 24px; height: 56px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .td-back {
+    display: flex; align-items: center; gap: 8px;
+    background: none; border: none; color: var(--muted);
+    cursor: pointer; font-family: 'Roboto'; font-size: 14px; font-weight: 500;
+    padding: 6px 10px; border-radius: 7px; transition: all .15s;
+  }
+  .td-back:hover { color: var(--text); background: var(--surface2); }
+  .td-actions { display: flex; gap: 8px; }
+
+  .td-body { flex: 1; padding: 28px; max-width: 1100px; width: 100%; margin: 0 auto; }
+
+  /* Hero header */
+  .td-hero {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    flex-wrap: wrap; gap: 16px; margin-bottom: 28px;
+  }
+  .td-hero-left { display: flex; flex-direction: column; gap: 8px; }
+  .td-pair-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .td-pair { font-size: 28px; font-weight: 900; font-family: 'Roboto Mono'; letter-spacing: -0.5px; }
+  .td-date { font-size: 13px; color: var(--muted); margin-top: 2px; }
+  .td-pnl-big {
+    font-size: 40px; font-weight: 900; font-family: 'Roboto Mono'; line-height: 1;
+  }
+  .td-pnl-big.pos { color: var(--win); }
+  .td-pnl-big.neg { color: var(--loss); }
+  .td-pnl-big.zero { color: var(--muted); }
+
+  /* Stats grid */
+  .td-stats-grid {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px;
+    margin-bottom: 24px;
+  }
+  @media(max-width:700px){ .td-stats-grid { grid-template-columns: 1fr 1fr; } }
+  .td-stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .td-stat-label { font-size: 10px; text-transform: uppercase; letter-spacing: .6px; color: var(--muted); font-weight: 600; margin-bottom: 6px; }
+  .td-stat-val { font-size: 18px; font-weight: 700; font-family: 'Roboto Mono'; }
+
+  /* Two-col layout */
+  .td-layout { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media(max-width:800px){ .td-layout { grid-template-columns: 1fr; } }
+
+  /* Charts gallery */
+  .td-charts-grid {
+    display: grid; gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+  .td-chart-img {
+    width: 100%; aspect-ratio: 16/9; object-fit: cover;
+    border-radius: 10px; border: 1px solid var(--border);
+    cursor: zoom-in; transition: border-color .15s, transform .15s;
+    display: block;
+  }
+  .td-chart-img:hover { border-color: var(--accent); transform: scale(1.01); }
+
+  /* Section card */
+  .td-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 20px;
+  }
+  .td-card-title {
+    font-size: 11px; font-weight: 700; letter-spacing: .6px;
+    text-transform: uppercase; color: var(--muted); margin-bottom: 14px;
+    display: flex; align-items: center; gap: 6px;
+  }
+
+  /* Review section */
+  .td-review-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+  @media(max-width:600px){ .td-review-grid { grid-template-columns: 1fr; } }
+
+  /* Emotion + execution sliders */
+  .td-slider-row { margin-bottom: 14px; }
+  .td-slider-label { display: flex; justify-content: space-between; margin-bottom: 5px; }
+  .td-slider-label span:first-child { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .td-slider-label span:last-child { font-size: 12px; font-weight: 700; font-family: 'Roboto Mono'; }
+  .td-slider {
+    width: 100%; height: 4px; border-radius: 2px;
+    -webkit-appearance: none; appearance: none;
+    background: var(--border); outline: none; cursor: pointer;
+  }
+  .td-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px;
+    border-radius: 50%; background: var(--accent); cursor: pointer;
+    border: 2px solid var(--surface);
+  }
+  .td-slider::-moz-range-thumb {
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); cursor: pointer; border: 2px solid var(--surface);
+  }
+
+  /* Mistake tags */
+  .td-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+  .td-tag {
+    padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: 600;
+    cursor: pointer; border: 1px solid var(--border); color: var(--muted);
+    background: var(--surface2); transition: all .15s; user-select: none;
+  }
+  .td-tag.active { background: rgba(244,63,94,.15); color: var(--loss); border-color: var(--loss); }
+  .td-tag.good { background: rgba(0,229,160,.12); color: var(--accent); border-color: var(--accent); }
+
+  /* Lesson textarea */
+  .td-textarea {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-family: 'Roboto', sans-serif;
+    font-size: 13px; padding: 10px 14px; outline: none; resize: vertical;
+    min-height: 80px; transition: border-color .15s; line-height: 1.6;
+  }
+  .td-textarea:focus { border-color: var(--accent); }
+
+  /* Save review btn */
+  .td-save-review {
+    background: var(--accent); border: none; border-radius: 8px;
+    color: #0a0c10; font-family: 'Roboto'; font-size: 13px; font-weight: 700;
+    padding: 9px 20px; cursor: pointer; transition: background .15s; margin-top: 12px;
+  }
+  .td-save-review:hover { background: #00ffb3; }
+
+  /* Grade badge */
+  .td-grade {
+    width: 48px; height: 48px; border-radius: 50%; display: flex;
+    align-items: center; justify-content: center; font-size: 18px; font-weight: 900;
+    font-family: 'Roboto Mono'; flex-shrink: 0;
+  }
+  .td-grade-A { background: rgba(34,197,94,.2); color: var(--win); border: 2px solid var(--win); }
+  .td-grade-B { background: rgba(14,165,233,.2); color: var(--accent2); border: 2px solid var(--accent2); }
+  .td-grade-C { background: rgba(245,158,11,.2); color: var(--warn); border: 2px solid var(--warn); }
+  .td-grade-D { background: rgba(244,63,94,.15); color: var(--loss); border: 2px solid var(--loss); }
+
   ::-webkit-scrollbar { width: 6px; height: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
@@ -2282,7 +2428,7 @@ function renderTradeTable() {
           ${t.tp ? `<span style="color:var(--win);">TP ${t.tp}</span>` : ''}
          </div>`
       : '—';
-    return `<tr style="cursor:pointer;" onclick="editTrade(${origIdx})" title="Click to edit" onmouseover="this.querySelector('.row-edit-hint').style.opacity='1'" onmouseout="this.querySelector('.row-edit-hint').style.opacity='0'">
+    return `<tr style="cursor:pointer;" onclick="openTradeDetail(${origIdx})" title="Click to view detail" onmouseover="this.querySelector('.row-edit-hint').style.opacity='1'" onmouseout="this.querySelector('.row-edit-hint').style.opacity='0'">
       <td style="color:var(--muted);font-size:12px;">${fmtDateTime(t.date)}</td>
       <td><span class="pair-chip">${t.pair || '—'}</span></td>
       <td><span class="badge ${t.side === 'BUY' ? 'badge-buy' : 'badge-sell'}">${t.side || '—'}</span></td>
@@ -2297,7 +2443,7 @@ function renderTradeTable() {
       <td><div class="note-text" title="${t.note || ''}">${t.note || '—'}</div></td>
       <td>${imgHtml}</td>
       <td><div class="action-btns" onclick="event.stopPropagation()">
-        <span class="row-edit-hint" style="opacity:0;transition:opacity .15s;font-size:10px;color:var(--accent);margin-right:4px;">edit</span>
+        <span class="row-edit-hint" style="opacity:0;transition:opacity .15s;font-size:10px;color:var(--accent);margin-right:4px;">view</span>
         <button class="icon-btn" onclick="editTrade(${origIdx})" title="Edit">✏️</button>
         <button class="icon-btn del-btn" onclick="deleteTrade(${origIdx})" title="Delete">🗑</button>
       </div></td>
@@ -2510,7 +2656,9 @@ function saveTrade() {
     session: document.getElementById('f-session').value,
     note: document.getElementById('f-note').value,
     images: [...currentImages],
-    image: currentImages[0] || ''
+    image: currentImages[0] || '',
+    // Preserve existing review when editing
+    review: editIndex >= 0 ? (trades[editIndex]?.review || null) : null
   };
   if (!trade.date || !trade.pair) { alert('Please fill in Date and Pair.'); return; }
   if (editIndex >= 0) trades[editIndex] = trade;
@@ -2532,6 +2680,252 @@ function deleteTrade(idx) {
   cloudSave();
   renderDashboard();
   renderTradeTable();
+}
+
+// ===== TRADE DETAIL PAGE =====
+let tdCurrentIdx = -1;
+
+const MISTAKE_TAGS = [
+  'FOMO entry', 'Moved SL', 'Overtraded', 'Revenge trade',
+  'Ignored plan', 'Wrong timeframe', 'Late entry', 'Early exit',
+  'Sized too big', 'No SL set', 'News surprise', 'Chased price'
+];
+
+function openTradeDetail(idx) {
+  tdCurrentIdx = idx;
+  const t = trades[idx];
+  if (!t) return;
+  renderTradeDetailPage(t, idx);
+  document.getElementById('trade-detail-overlay').classList.add('open');
+  document.getElementById('trade-detail-overlay').scrollTop = 0;
+}
+
+function closeTradeDetail() {
+  document.getElementById('trade-detail-overlay').classList.remove('open');
+  tdCurrentIdx = -1;
+}
+
+function tdEditCurrent() {
+  closeTradeDetail();
+  editTrade(tdCurrentIdx);
+}
+
+function tdDeleteCurrent() {
+  if (!confirm('Delete this trade?')) return;
+  trades.splice(tdCurrentIdx, 1);
+  cloudSave();
+  closeTradeDetail();
+  renderDashboard();
+  renderTradeTable();
+}
+
+function renderTradeDetailPage(t, idx) {
+  const allImgs = Array.isArray(t.images) && t.images.length ? t.images : (t.image ? [t.image] : []);
+  const pnl = t.pnl ?? null;
+  const pnlClass = pnl === null ? 'zero' : pnl >= 0 ? 'pos' : 'neg';
+  const pnlText = pnl === null ? '—' : `${pnl >= 0 ? '+' : ''}$${(+pnl).toFixed(2)}`;
+  const result = tradeResult(t);
+  const rrVal = calcRRValue(t);
+  const review = t.review || {};
+
+  // Grade from review score
+  const score = review.execution ?? review.emotion ?? null;
+  let grade = '—', gradeClass = '';
+  if (score !== null) {
+    if (score >= 8) { grade = 'A'; gradeClass = 'td-grade-A'; }
+    else if (score >= 6) { grade = 'B'; gradeClass = 'td-grade-B'; }
+    else if (score >= 4) { grade = 'C'; gradeClass = 'td-grade-C'; }
+    else { grade = 'D'; gradeClass = 'td-grade-D'; }
+  }
+
+  const mistakeTags = review.mistakes || [];
+  const goodTags = review.goodPoints || [];
+
+  document.getElementById('td-body').innerHTML = `
+
+    <!-- Hero -->
+    <div class="td-hero">
+      <div class="td-hero-left">
+        <div class="td-pair-row">
+          <span class="td-pair">${t.pair || '—'}</span>
+          <span class="badge ${t.side === 'BUY' ? 'badge-buy' : 'badge-sell'}" style="font-size:13px;padding:4px 12px;">${t.side || '—'}</span>
+          <span class="badge ${result === 'WIN' ? 'badge-win' : 'badge-loss'}" style="font-size:13px;padding:4px 12px;">${result}</span>
+          ${t.strategy ? `<span class="badge badge-strat">${t.strategy}</span>` : ''}
+        </div>
+        <div class="td-date">${fmtDateTimeFull(t.date)} · ${t.session || 'Unknown session'}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:16px;">
+        ${grade !== '—' ? `<div class="td-grade ${gradeClass}">${grade}</div>` : ''}
+        <div>
+          <div class="td-pnl-big ${pnlClass}">${pnlText}</div>
+          ${t.riskPct ? `<div style="font-size:12px;color:var(--muted);text-align:right;margin-top:3px;">Risk: ${t.riskPct}% capital</div>` : ''}
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="td-stats-grid">
+      <div class="td-stat">
+        <div class="td-stat-label">Entry</div>
+        <div class="td-stat-val" style="color:var(--text)">${t.entry || '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Exit</div>
+        <div class="td-stat-val" style="color:var(--text)">${t.exit || '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Stop Loss</div>
+        <div class="td-stat-val" style="color:var(--loss)">${t.sl || '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Take Profit</div>
+        <div class="td-stat-val" style="color:var(--win)">${t.tp || '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Lot Size</div>
+        <div class="td-stat-val">${t.lot || '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">R:R Ratio</div>
+        <div class="td-stat-val" style="color:${rrVal === null ? 'var(--muted)' : rrVal >= 2 ? 'var(--win)' : rrVal >= 1 ? 'var(--warn)' : 'var(--loss)'}">
+          ${rrVal !== null ? `1:${rrVal.toFixed(2)}` : '—'}
+        </div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Execution Score</div>
+        <div class="td-stat-val" style="color:var(--accent2)">${review.execution !== undefined ? review.execution + '/10' : '—'}</div>
+      </div>
+      <div class="td-stat">
+        <div class="td-stat-label">Emotion Score</div>
+        <div class="td-stat-val" style="color:var(--warn)">${review.emotion !== undefined ? review.emotion + '/10' : '—'}</div>
+      </div>
+    </div>
+
+    <!-- Charts + Info layout -->
+    <div class="td-layout" style="margin-bottom:20px;">
+
+      <!-- Left: Charts -->
+      <div>
+        <div class="td-card" style="margin-bottom:16px;">
+          <div class="td-card-title">📷 Chart Screenshots</div>
+          ${allImgs.length
+            ? `<div class="td-charts-grid">
+                ${allImgs.map((img, ii) => `
+                  <img class="td-chart-img" src="${img}"
+                    onclick="openLightboxArr(${ii}, trades[${idx}]?.images || [trades[${idx}]?.image])"
+                    alt="Chart ${ii+1}">`).join('')}
+               </div>`
+            : `<div style="text-align:center;padding:32px;color:var(--muted);font-size:13px;">
+                 No screenshots attached
+                 <div style="margin-top:6px;font-size:11px;">Edit trade to add chart images</div>
+               </div>`
+          }
+        </div>
+
+        <!-- Entry note -->
+        ${t.note ? `
+        <div class="td-card">
+          <div class="td-card-title">📝 Entry Reason</div>
+          <div style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;">${t.note}</div>
+        </div>` : ''}
+      </div>
+
+      <!-- Right: Review -->
+      <div>
+        <div class="td-card">
+          <div class="td-card-title">🎯 Trade Review</div>
+
+          <!-- Execution score -->
+          <div class="td-slider-row">
+            <div class="td-slider-label">
+              <span>Execution Quality</span>
+              <span id="td-exec-val" style="color:var(--accent2)">${review.execution ?? 5}/10</span>
+            </div>
+            <input type="range" class="td-slider" id="td-exec" min="0" max="10" step="1"
+              value="${review.execution ?? 5}"
+              oninput="document.getElementById('td-exec-val').textContent=this.value+'/10'">
+          </div>
+
+          <!-- Emotion score -->
+          <div class="td-slider-row">
+            <div class="td-slider-label">
+              <span>Emotional Control</span>
+              <span id="td-emo-val" style="color:var(--warn)">${review.emotion ?? 5}/10</span>
+            </div>
+            <input type="range" class="td-slider" id="td-emo" min="0" max="10" step="1"
+              value="${review.emotion ?? 5}"
+              oninput="document.getElementById('td-emo-val').textContent=this.value+'/10'">
+          </div>
+
+          <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+          <!-- Mistakes -->
+          <div style="margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Mistakes Made</div>
+            <div class="td-tags" id="td-mistakes">
+              ${MISTAKE_TAGS.map(tag => `
+                <div class="td-tag ${mistakeTags.includes(tag) ? 'active' : ''}"
+                  onclick="tdToggleMistake(this,'${tag.replace(/'/g,"\\'")}')">
+                  ${tag}
+                </div>`).join('')}
+            </div>
+          </div>
+
+          <div style="height:1px;background:var(--border);margin:14px 0;"></div>
+
+          <!-- Lesson learned -->
+          <div style="margin-bottom:14px;">
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">Lesson Learned</div>
+            <textarea class="td-textarea" id="td-lesson" placeholder="What did you learn from this trade? What would you do differently?">${review.lesson || ''}</textarea>
+          </div>
+
+          <!-- What went well -->
+          <div>
+            <div style="font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--muted);margin-bottom:8px;">What Went Well</div>
+            <textarea class="td-textarea" id="td-good" placeholder="What did you do right in this trade?">${review.goodNote || ''}</textarea>
+          </div>
+
+          <button class="td-save-review" onclick="saveTradeReview(${idx})">
+            💾 Save Review
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function tdToggleMistake(el, tag) {
+  el.classList.toggle('active');
+}
+
+function saveTradeReview(idx) {
+  const t = trades[idx];
+  if (!t) return;
+
+  const mistakes = Array.from(document.querySelectorAll('#td-mistakes .td-tag.active')).map(el => el.textContent.trim());
+  const review = {
+    execution: parseInt(document.getElementById('td-exec').value),
+    emotion:   parseInt(document.getElementById('td-emo').value),
+    mistakes,
+    lesson:    document.getElementById('td-lesson').value.trim(),
+    goodNote:  document.getElementById('td-good').value.trim(),
+    updatedAt: Date.now()
+  };
+
+  trades[idx] = { ...t, review };
+  cloudSave();
+
+  // Flash save button
+  const btn = document.querySelector('.td-save-review');
+  if (btn) { btn.textContent = '✓ Saved!'; btn.style.background = 'var(--win)'; setTimeout(() => { btn.textContent = '💾 Save Review'; btn.style.background = ''; }, 1500); }
+
+  // Re-render to update grade badge
+  renderTradeDetailPage(trades[idx], idx);
+}
+
+function fmtDateTimeFull(d) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-US', { weekday:'long', year:'numeric', month:'long', day:'numeric', hour:'2-digit', minute:'2-digit' });
 }
 
 // ===== LIGHTBOX (multi-image) =====
@@ -3311,6 +3705,23 @@ window.addEventListener('DOMContentLoaded', () => {
       <button class="numpad-btn del" onclick="numpadKey('⌫')">⌫</button>
     </div>
     <button class="numpad-confirm" onclick="confirmNumpad()">✓ Confirm</button>
+  </div>
+</div>
+
+<!-- TRADE DETAIL OVERLAY -->
+<div id="trade-detail-overlay">
+  <div class="td-topbar">
+    <button class="td-back" onclick="closeTradeDetail()">
+      ← Back to Trade Log
+    </button>
+    <div class="td-actions">
+      <button class="btn btn-ghost" id="td-edit-btn" onclick="tdEditCurrent()" style="font-size:12px;">✏️ Edit</button>
+      <button class="btn btn-ghost" id="td-delete-btn" onclick="tdDeleteCurrent()" style="font-size:12px;color:var(--loss);border-color:var(--loss);">🗑 Delete</button>
+    </div>
+  </div>
+
+  <div class="td-body" id="td-body">
+    <!-- Rendered by openTradeDetail() -->
   </div>
 </div>
 
