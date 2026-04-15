@@ -3602,71 +3602,93 @@ function autoCalcLot() {
 }
 
 function updateSltpVisual(entry, sl, tp) {
-  const vis = document.getElementById('sltp-visual');
+  const vis  = document.getElementById('sltp-visual');
   const wrap = document.getElementById('sltp-bar-wrap');
-  if (!entry || !sl || !vis || !wrap) { vis.style.display = 'none'; return; }
+  if (!vis || !wrap) return;
+  if (!entry || !sl || isNaN(entry) || isNaN(sl)) { vis.style.display = 'none'; return; }
 
   vis.style.display = 'block';
   document.getElementById('bar-entry-val').textContent = entry;
-  document.getElementById('bar-sl-val').textContent    = sl || '—';
+  document.getElementById('bar-sl-val').textContent    = sl;
   document.getElementById('bar-tp-val').textContent    = tp || '—';
 
-  if (!sl) return;
-  const min  = Math.min(sl, entry, tp || entry);
-  const max  = Math.max(sl, entry, tp || entry);
-  const span = max - min || 1;
+  // Calculate range — pad by 20% on each side if needed
+  const tpOrEntry = (tp && !isNaN(tp)) ? tp : entry;
+  const rawMin = Math.min(sl, entry, tpOrEntry);
+  const rawMax = Math.max(sl, entry, tpOrEntry);
+  const rawSpan = rawMax - rawMin || Math.abs(entry - sl) || 1;
+  const pad = rawSpan * 0.15;
+  const min = rawMin - pad;
+  const max = rawMax + pad;
+  const span = max - min;
 
-  const pct = v => ((v - min) / span * 100).toFixed(1) + '%';
+  const pct = v => Math.max(0, Math.min(100, ((v - min) / span * 100)));
 
-  const side = document.getElementById('opt-buy')?.classList.contains('active') ? 'BUY' : 'SELL';
-  const slPct    = parseFloat(pct(sl));
-  const entryPct = parseFloat(pct(entry));
-  const tpPct    = tp ? parseFloat(pct(tp)) : null;
+  const slPct    = pct(sl);
+  const entryPct = pct(entry);
+  const tpPct    = (tp && !isNaN(tp)) ? pct(tp) : null;
 
-  // Build bar
-  let html = '<div style="position:relative;height:24px;background:var(--surface2);border-radius:6px;overflow:hidden;">';
+  // RR label
+  let rrHtml = '';
+  if (tp && !isNaN(tp)) {
+    const riskD = Math.abs(entry - sl);
+    const rewD  = Math.abs(tp - entry);
+    const rr    = riskD ? (rewD / riskD).toFixed(1) : '—';
+    const rrColor = parseFloat(rr) >= 2 ? 'var(--win)' : parseFloat(rr) >= 1 ? 'var(--warn)' : 'var(--loss)';
+    rrHtml = `<div style="text-align:right;font-size:11px;color:${rrColor};font-family:'Roboto Mono';font-weight:700;margin-bottom:5px;">R:R 1:${rr}</div>`;
+  }
 
-  // Loss zone (SL to Entry)
+  // Bar
+  let bar = '<div style="position:relative;height:24px;background:var(--surface2);border-radius:6px;overflow:hidden;">';
+
+  // Loss zone
   const lossL = Math.min(slPct, entryPct);
   const lossW = Math.abs(entryPct - slPct);
-  html += `<div style="position:absolute;left:${lossL}%;width:${lossW}%;height:100%;background:rgba(244,63,94,.2);"></div>`;
+  bar += `<div style="position:absolute;left:${lossL}%;width:${lossW}%;height:100%;background:rgba(244,63,94,.25);"></div>`;
 
-  // Win zone (Entry to TP)
+  // Win zone
   if (tpPct !== null) {
     const winL = Math.min(entryPct, tpPct);
     const winW = Math.abs(tpPct - entryPct);
-    html += `<div style="position:absolute;left:${winL}%;width:${winW}%;height:100%;background:rgba(34,197,94,.2);"></div>`;
+    bar += `<div style="position:absolute;left:${winL}%;width:${winW}%;height:100%;background:rgba(34,197,94,.25);"></div>`;
   }
 
-  // Markers
-  html += `<div title="SL" style="position:absolute;left:${slPct}%;top:0;width:2px;height:100%;background:var(--loss);"></div>`;
-  html += `<div title="Entry" style="position:absolute;left:${entryPct}%;top:0;width:2px;height:100%;background:var(--accent2);"></div>`;
-  if (tpPct !== null)
-    html += `<div title="TP" style="position:absolute;left:${tpPct}%;top:0;width:2px;height:100%;background:var(--win);"></div>`;
+  // SL marker + label
+  bar += `<div title="SL: ${sl}" style="position:absolute;left:calc(${slPct}% - 1px);top:0;width:2px;height:100%;background:var(--loss);"></div>`;
+  bar += `<div style="position:absolute;left:${slPct}%;top:1px;transform:translateX(-50%);font-size:9px;color:var(--loss);font-family:'Roboto Mono';white-space:nowrap;line-height:1;padding-top:5px;">SL</div>`;
 
-  html += '</div>';
+  // Entry marker + label
+  bar += `<div title="Entry: ${entry}" style="position:absolute;left:calc(${entryPct}% - 1px);top:0;width:2px;height:100%;background:var(--accent2);"></div>`;
+  bar += `<div style="position:absolute;left:${entryPct}%;top:1px;transform:translateX(-50%);font-size:9px;color:var(--accent2);font-family:'Roboto Mono';white-space:nowrap;line-height:1;padding-top:5px;">Entry</div>`;
 
-  // RR ratio label above bar
-  if (tp) {
-    const riskD = Math.abs(entry - sl);
-    const rewD  = Math.abs(tp - entry);
-    const rr    = riskD ? (rewD/riskD).toFixed(1) : '—';
-    const rrColor = parseFloat(rr) >= 2 ? 'var(--win)' : parseFloat(rr) >= 1 ? 'var(--warn)' : 'var(--loss)';
-    html = `<div style="text-align:right;font-size:11px;color:${rrColor};font-family:'Roboto Mono';font-weight:700;margin-bottom:4px;">R:R 1:${rr}</div>` + html;
+  // TP marker + label
+  if (tpPct !== null) {
+    bar += `<div title="TP: ${tp}" style="position:absolute;left:calc(${tpPct}% - 1px);top:0;width:2px;height:100%;background:var(--win);"></div>`;
+    bar += `<div style="position:absolute;left:${tpPct}%;top:1px;transform:translateX(-50%);font-size:9px;color:var(--win);font-family:'Roboto Mono';white-space:nowrap;line-height:1;padding-top:5px;">TP</div>`;
   }
 
-  wrap.innerHTML = html;
+  bar += '</div>';
+  wrap.innerHTML = rrHtml + bar;
 }
 
 function calcRR() {
   const entry    = parseFloat(document.getElementById('f-entry').value);
   const sl       = parseFloat(document.getElementById('f-sl').value);
-  const tp       = parseFloat(document.getElementById('f-tp').value);
-  const riskPct  = parseFloat(document.getElementById('f-risk-pct')?.value || document.getElementById('f-risk-pct-pip')?.value);
+  const tp       = parseFloat(document.getElementById('f-tp').value) || null;
+  const riskPctEl = document.getElementById('f-risk-pct');
+  const riskPipEl = document.getElementById('f-risk-pct-pip');
+  const riskPct  = parseFloat((sltpMode === 'pip' ? riskPipEl : riskPctEl)?.value) || null;
   const disp     = document.getElementById('rr-display');
 
-  if (!entry || !sl) { disp.style.display = 'none'; document.getElementById('sltp-visual').style.display = 'none'; return; }
-  disp.style.display = 'block';
+  // Show visual even without TP (just entry + SL is enough)
+  if (!entry || !sl || isNaN(entry) || isNaN(sl)) {
+    if (disp) disp.style.display = 'none';
+    const vis = document.getElementById('sltp-visual');
+    if (vis) vis.style.display = 'none';
+    return;
+  }
+
+  if (disp) disp.style.display = 'block';
 
   const riskPts   = Math.abs(entry - sl);
   const rewardPts = tp ? Math.abs(tp - entry) : null;
@@ -4317,11 +4339,21 @@ window.addEventListener('DOMContentLoaded', async () => {
           <!-- Quick pip presets -->
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:8px;">
             <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px;">Quick SL:</span>
-            ${[10,15,20,25,30,50].map(p => `<button type="button" class="pip-preset-btn" onclick="setSlPip(${p})">${p}</button>`).join('')}
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(10)">10</button>
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(15)">15</button>
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(20)">20</button>
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(25)">25</button>
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(30)">30</button>
+            <button type="button" class="pip-preset-btn" onclick="setSlPip(50)">50</button>
           </div>
           <div style="display:flex;gap:5px;flex-wrap:wrap;margin-bottom:10px;">
             <span style="font-size:11px;color:var(--muted);align-self:center;margin-right:2px;">Quick TP:</span>
-            ${[20,30,40,50,60,100].map(p => `<button type="button" class="pip-preset-btn" onclick="setTpPip(${p})" style="color:var(--win);border-color:rgba(34,197,94,.3);">${p}</button>`).join('')}
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(20)"  style="color:var(--win);border-color:rgba(34,197,94,.3);">20</button>
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(30)"  style="color:var(--win);border-color:rgba(34,197,94,.3);">30</button>
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(40)"  style="color:var(--win);border-color:rgba(34,197,94,.3);">40</button>
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(50)"  style="color:var(--win);border-color:rgba(34,197,94,.3);">50</button>
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(60)"  style="color:var(--win);border-color:rgba(34,197,94,.3);">60</button>
+            <button type="button" class="pip-preset-btn" onclick="setTpPip(100)" style="color:var(--win);border-color:rgba(34,197,94,.3);">100</button>
           </div>
           <!-- Synced price display -->
           <div id="pip-price-preview" style="display:none;font-size:11px;color:var(--muted);background:var(--bg);padding:6px 10px;border-radius:6px;font-family:'Roboto Mono';">
