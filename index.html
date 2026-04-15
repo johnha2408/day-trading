@@ -1182,6 +1182,8 @@ async function doLogin() {
 
     currentUser = { username, pinHash };
     saveRecentAccount(username);
+    // Persist session so F5 doesn't log out
+    localStorage.setItem('fxj_session', JSON.stringify({ username, pinHash, ts: Date.now() }));
     setTimeout(() => enterApp(username), 600);
 
   } catch(e) {
@@ -1194,6 +1196,7 @@ async function doLogin() {
 function loginLocalMode(username, pin) {
   currentUser = { username, pinHash: null, localOnly: true };
   saveRecentAccount(username);
+  localStorage.setItem('fxj_session', JSON.stringify({ username, pinHash: null, localOnly: true, ts: Date.now() }));
   enterApp(username);
 }
 
@@ -1296,6 +1299,7 @@ function logoutUser() {
   syncListenerAttached = false;
   currentUser = null;
   trades = []; strategies = [...DEFAULT_STRATEGIES]; initialCapital = 0;
+  localStorage.removeItem('fxj_session'); // clear saved session
   document.getElementById('login-screen').classList.remove('hidden');
   document.getElementById('user-chip').style.display = 'none';
   document.getElementById('login-username').value = '';
@@ -3507,7 +3511,7 @@ function calcRR() {
 });
 
 // ===== INIT =====
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
   applyTheme();
   renderRecentAccounts();
 
@@ -3515,6 +3519,38 @@ window.addEventListener('DOMContentLoaded', () => {
   document.getElementById('login-btn')?.addEventListener('click', doLogin);
   document.getElementById('login-username')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
   document.getElementById('login-pin')?.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+
+  // ── Auto-restore session (survive F5) ──
+  // Session expires after 7 days for security
+  const SESSION_TTL = 7 * 24 * 60 * 60 * 1000;
+  try {
+    const raw = localStorage.getItem('fxj_session');
+    if (raw) {
+      const sess = JSON.parse(raw);
+      const age  = Date.now() - (sess.ts || 0);
+      if (sess.username && age < SESSION_TTL) {
+        // Re-verify against Firebase silently, then enter app
+        const fbOk = initFirebase();
+        if (fbOk && sess.pinHash) {
+          const snap = await db.ref('users/' + sess.username).once('value');
+          if (snap.exists() && snap.val().pinHash === sess.pinHash) {
+            currentUser = { username: sess.username, pinHash: sess.pinHash };
+            enterApp(sess.username);
+          } else {
+            localStorage.removeItem('fxj_session'); // stale/wrong session
+          }
+        } else if (sess.localOnly) {
+          currentUser = { username: sess.username, pinHash: null, localOnly: true };
+          enterApp(sess.username);
+        }
+      } else if (age >= SESSION_TTL) {
+        localStorage.removeItem('fxj_session'); // expired
+      }
+    }
+  } catch(e) {
+    console.warn('Session restore failed:', e);
+    localStorage.removeItem('fxj_session');
+  }
 
   // Don't auto-load data — wait for login
 });
