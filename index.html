@@ -2809,6 +2809,33 @@ function clearJournalNote() {
 }
 let tdCurrentIdx = -1;
 
+function renderJournalNote(noteStr) {
+  if (!noteStr) return '';
+  const beforeMatch = noteStr.match(/\[Before\]\n([\s\S]*?)(?=\n\n\[During\]|\n\n\[After\]|$)/);
+  const duringMatch = noteStr.match(/\[During\]\n([\s\S]*?)(?=\n\n\[After\]|$)/);
+  const afterMatch  = noteStr.match(/\[After\]\n([\s\S]*?)$/);
+  const isStructured = beforeMatch || duringMatch || afterMatch;
+  if (!isStructured) {
+    return `<div style="font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">${noteStr}</div>`;
+  }
+  const sections = [
+    { icon:'🔍', label:'Before Entry', sub:'Setup & Confluences', color:'var(--accent2)', bg:'rgba(14,165,233,.08)', content: beforeMatch?.[1]?.trim() },
+    { icon:'⚡', label:'During Trade',  sub:'Trade Management',   color:'var(--warn)',   bg:'rgba(245,158,11,.08)', content: duringMatch?.[1]?.trim() },
+    { icon:'🎯', label:'After Exit',    sub:'Review & Lessons',   color:'var(--accent)', bg:'rgba(0,229,160,.08)',  content: afterMatch?.[1]?.trim()  },
+  ].filter(s => s.content);
+  if (!sections.length) return '';
+  return sections.map(s => `
+    <div style="margin-bottom:12px;background:${s.bg};border-radius:8px;padding:12px 14px;border-left:3px solid ${s.color};">
+      <div style="display:flex;align-items:center;gap:7px;margin-bottom:7px;">
+        <span style="font-size:14px;line-height:1;">${s.icon}</span>
+        <span style="font-size:12px;font-weight:700;color:${s.color};">${s.label}</span>
+        <span style="font-size:11px;color:var(--muted);">· ${s.sub}</span>
+      </div>
+      <div style="font-size:13px;color:var(--text);line-height:1.8;white-space:pre-wrap;">${s.content}</div>
+    </div>
+  `).join('');
+}
+
 const MISTAKE_TAGS = [
   'FOMO entry', 'Moved SL', 'Overtraded', 'Revenge trade',
   'Ignored plan', 'Wrong timeframe', 'Late entry', 'Early exit',
@@ -2949,8 +2976,8 @@ function renderTradeDetailPage(t, idx) {
         <!-- Entry note -->
         ${t.note ? `
         <div class="td-card">
-          <div class="td-card-title">📝 Entry Reason</div>
-          <div style="font-size:13px;color:var(--text);line-height:1.7;white-space:pre-wrap;">${t.note}</div>
+          <div class="td-card-title">📝 Trade Journal</div>
+          ${renderJournalNote(t.note)}
         </div>` : ''}
       </div>
 
