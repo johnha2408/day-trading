@@ -90,12 +90,26 @@
   .topbar {
     background: var(--surface);
     border-bottom: 1px solid var(--border);
-    padding: 0 28px;
-    height: 56px;
+    padding: 8px 28px;
+    min-height: 56px;
+    height: auto;
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 16px;
+    flex-wrap: wrap;
+    gap: 8px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  #global-period-row {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    padding: 2px 16px;
+  }
+  @media(max-width:900px) {
+    #global-period-row { border: none; padding: 0; order: 3; width: 100%; justify-content: flex-start; }
   }
   .topbar-title { font-size: 16px; font-weight: 700; }
   .topbar-actions { display: flex; gap: 10px; align-items: center; }
@@ -1928,6 +1942,15 @@ function closeDayModal() {
 }
 
 // ===== NAVIGATION (updated to handle calendar page) =====
+function refreshAllPages() {
+  const activePage = document.querySelector('.page.active')?.id;
+  if (activePage === 'page-dashboard' || !activePage) renderDashboard();
+  if (activePage === 'page-trades')   renderTradeTable();
+  if (activePage === 'page-stats')    renderStats();
+  if (activePage === 'page-calendar') renderCalendar();
+  if (activePage === 'page-strategy') { renderStratList(); if (activeStrategyName) renderStratDetail(activeStrategyName); }
+}
+
 function showPage(page, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
@@ -1935,10 +1958,10 @@ function showPage(page, el) {
   el.classList.add('active');
   document.getElementById('page-title').textContent = el.querySelector('.nav-icon').nextSibling.textContent.trim();
   if (page === 'dashboard') renderDashboard();
-  if (page === 'trades') renderTradeTable();
-  if (page === 'stats') renderStats();
-  if (page === 'calendar') renderCalendar();
-  if (page === 'strategy') { renderStratList(); if (activeStrategyName) renderStratDetail(activeStrategyName); }
+  if (page === 'trades')    renderTradeTable();
+  if (page === 'stats')     renderStats();
+  if (page === 'calendar')  renderCalendar();
+  if (page === 'strategy')  { renderStratList(); if (activeStrategyName) renderStratDetail(activeStrategyName); }
 }
 
 // ===== PERIOD =====
@@ -1948,10 +1971,9 @@ function setPeriod(p, el) {
   customRangeTo   = null;
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   if (el) el.classList.add('active');
-  // Hide custom label
   const lbl = document.getElementById('custom-range-label');
   if (lbl) lbl.style.display = 'none';
-  renderDashboard();
+  refreshAllPages();
 }
 
 // ===== CUSTOM DATE RANGE PICKER =====
@@ -2176,7 +2198,7 @@ function drClear() {
   document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
   document.getElementById('pbtn-day')?.classList.add('active');
   renderDrCals();
-  renderDashboard();
+  refreshAllPages();
 }
 
 function drApply() {
@@ -2200,7 +2222,7 @@ function drApply() {
   drOpen = false;
   document.getElementById('dr-popup').classList.remove('open');
   document.getElementById('dr-btn').classList.add('active');
-  renderDashboard();
+  refreshAllPages();
 }
 
 function applyCustomRange() { drApply(); } // backward compat alias
@@ -2386,7 +2408,7 @@ function chartOpts(prefix='') {
 
 // ===== TRADE TABLE =====
 function renderTradeTable() {
-  let filtered = [...trades];
+  let filtered = filterByPeriod([...trades]); // apply global period filter
   const search = document.getElementById('search-input')?.value?.toLowerCase() || '';
   const res = document.getElementById('filter-result')?.value || '';
   const side = document.getElementById('filter-side')?.value || '';
@@ -2459,10 +2481,11 @@ function sortTable(key) {
 
 // ===== STATS PAGE =====
 function renderStats() {
-  renderKPI(trades, 'stats-kpi-row');
+  const data = filterByPeriod(trades); // apply global period filter
+  renderKPI(data, 'stats-kpi-row');
   // Strategy table
   const stratMap = {};
-  trades.forEach(t => {
+  data.forEach(t => {
     const s = t.strategy || 'Unknown';
     if (!stratMap[s]) stratMap[s] = { w:0, l:0, pnl:0 };
     if (isWin(t)) stratMap[s].w++; else stratMap[s].l++;
@@ -2481,7 +2504,7 @@ function renderStats() {
 
   // Pair table
   const pairMap = {};
-  trades.forEach(t => {
+  data.forEach(t => {
     const p = t.pair || 'Unknown';
     if (!pairMap[p]) pairMap[p] = { w:0, l:0, pnl:0 };
     if (isWin(t)) pairMap[p].w++; else pairMap[p].l++;
@@ -2500,7 +2523,7 @@ function renderStats() {
 
   // Side table
   const sideMap = {BUY:{w:0,l:0,pnl:0}, SELL:{w:0,l:0,pnl:0}};
-  trades.forEach(t => {
+  data.forEach(t => {
     const s = t.side || 'BUY';
     if (!sideMap[s]) sideMap[s] = {w:0,l:0,pnl:0};
     if (isWin(t)) sideMap[s].w++; else sideMap[s].l++;
@@ -2522,7 +2545,7 @@ function renderStats() {
 
   // Monthly chart
   const mMap = {};
-  trades.forEach(t => {
+  data.forEach(t => {
     const d = new Date(t.date);
     const key = d.toLocaleString('en-US', {month:'short', year:'2-digit'});
     mMap[key] = (mMap[key]||0) + (t.pnl||0);
@@ -3029,8 +3052,9 @@ function renderStratList() {
     container.innerHTML = '<div style="color:var(--muted);font-size:13px;padding:12px;text-align:center;">No strategies yet</div>';
     return;
   }
+  const periodTrades = filterByPeriod(trades);
   container.innerHTML = strategies.map(name => {
-    const st = trades.filter(t => t.strategy === name);
+    const st = periodTrades.filter(t => t.strategy === name);
     const wins = st.filter(t => isWin(t)).length;
     const total = st.length;
     const wr = total ? Math.round(wins/total*100) : null;
@@ -3062,7 +3086,7 @@ function selectStrategy(name) {
 
 function renderStratDetail(name) {
   const panel = document.getElementById('strat-detail-panel');
-  const st = trades.filter(t => t.strategy === name);
+  const st = filterByPeriod(trades).filter(t => t.strategy === name);
   const wins = st.filter(t => isWin(t)).length;
   const losses = st.filter(t => isLoss(t)).length;
   const total = st.length;
@@ -3444,11 +3468,54 @@ window.addEventListener('DOMContentLoaded', () => {
 
   <!-- MAIN -->
   <main class="main">
-    <header class="topbar">
+    <header class="topbar" style="flex-wrap:wrap;height:auto;min-height:56px;padding:8px 28px;gap:8px;">
       <div style="display:flex;align-items:center;gap:10px;">
         <button class="mobile-menu-btn" onclick="toggleSidebar()" title="Menu">☰</button>
         <div class="topbar-title" id="page-title">Dashboard</div>
       </div>
+
+      <!-- GLOBAL PERIOD FILTER — visible on all pages -->
+      <div class="period-row" id="global-period-row" style="flex:1;flex-wrap:wrap;gap:6px;align-items:center;justify-content:center;margin:0;">
+        <button class="period-btn active" id="pbtn-day"   onclick="setPeriod('day',   this)">Day</button>
+        <button class="period-btn"        id="pbtn-week"  onclick="setPeriod('week',  this)">Week</button>
+        <button class="period-btn"        id="pbtn-month" onclick="setPeriod('month', this)">Month</button>
+        <button class="period-btn"        id="pbtn-all"   onclick="setPeriod('all',   this)">All Time</button>
+        <div style="position:relative;" id="dr-container">
+          <button class="dr-btn" id="dr-btn" onclick="toggleDrPicker(event)">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
+              <rect x="1" y="3" width="14" height="12" rx="2"/>
+              <path d="M1 7h14M5 1v4M11 1v4"/>
+            </svg>
+            <span id="dr-btn-label">Custom Range</span>
+          </button>
+          <div class="dr-popup" id="dr-popup">
+            <div class="dr-calendars">
+              <div class="dr-cal" id="dr-cal-left"></div>
+              <div class="dr-cal" id="dr-cal-right"></div>
+            </div>
+            <div class="dr-footer">
+              <div class="dr-presets">
+                <button class="dr-preset" onclick="drPreset('today')">Today</button>
+                <button class="dr-preset" onclick="drPreset('yesterday')">Yesterday</button>
+                <button class="dr-preset" onclick="drPreset('7d')">Last 7 days</button>
+                <button class="dr-preset" onclick="drPreset('30d')">Last 30 days</button>
+                <button class="dr-preset" onclick="drPreset('thisMonth')">This month</button>
+                <button class="dr-preset" onclick="drPreset('lastMonth')">Last month</button>
+                <button class="dr-preset" onclick="drPreset('thisYear')">This year</button>
+              </div>
+              <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+                <div class="dr-display" id="dr-display">Select dates</div>
+                <div class="dr-actions">
+                  <button class="dr-clear" onclick="drClear()">Clear</button>
+                  <button class="dr-apply" onclick="drApply()">Apply →</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <span id="custom-range-label" class="period-label-custom"></span>
+      </div>
+
       <div class="topbar-actions">
         <span class="sync-dot" id="sync-dot" title="Sync status"></span>
         <div class="user-chip" onclick="logoutUser()" id="user-chip" title="Click to logout" style="display:none;">
@@ -3465,51 +3532,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
       <!-- DASHBOARD -->
       <div id="page-dashboard" class="page active">
-        <div class="period-row" style="flex-wrap:wrap;gap:8px;align-items:center;">
-          <span style="font-size:12px;color:var(--muted);">Period:</span>
-          <button class="period-btn active" id="pbtn-day"   onclick="setPeriod('day',   this)">Day</button>
-          <button class="period-btn"        id="pbtn-week"  onclick="setPeriod('week',  this)">Week</button>
-          <button class="period-btn"        id="pbtn-month" onclick="setPeriod('month', this)">Month</button>
-          <button class="period-btn"        id="pbtn-all"   onclick="setPeriod('all',   this)">All Time</button>
-          <!-- Custom date range picker -->
-          <div style="position:relative;" id="dr-container">
-            <button class="dr-btn" id="dr-btn" onclick="toggleDrPicker(event)">
-              <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-                <rect x="1" y="3" width="14" height="12" rx="2"/>
-                <path d="M1 7h14M5 1v4M11 1v4"/>
-              </svg>
-              <span id="dr-btn-label">Custom Range</span>
-            </button>
-
-            <div class="dr-popup" id="dr-popup">
-              <!-- Two month calendars side by side -->
-              <div class="dr-calendars">
-                <div class="dr-cal" id="dr-cal-left"></div>
-                <div class="dr-cal" id="dr-cal-right"></div>
-              </div>
-
-              <div class="dr-footer">
-                <div class="dr-presets">
-                  <button class="dr-preset" onclick="drPreset('today')">Today</button>
-                  <button class="dr-preset" onclick="drPreset('yesterday')">Yesterday</button>
-                  <button class="dr-preset" onclick="drPreset('7d')">Last 7 days</button>
-                  <button class="dr-preset" onclick="drPreset('30d')">Last 30 days</button>
-                  <button class="dr-preset" onclick="drPreset('thisMonth')">This month</button>
-                  <button class="dr-preset" onclick="drPreset('lastMonth')">Last month</button>
-                  <button class="dr-preset" onclick="drPreset('thisYear')">This year</button>
-                </div>
-                <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-                  <div class="dr-display" id="dr-display">Select dates</div>
-                  <div class="dr-actions">
-                    <button class="dr-clear" onclick="drClear()">Clear</button>
-                    <button class="dr-apply" onclick="drApply()">Apply →</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          <span id="custom-range-label" class="period-label-custom"></span>
-        </div>
 
         <div class="kpi-row" id="kpi-row"></div>
 
