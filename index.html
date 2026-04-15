@@ -3531,14 +3531,15 @@ function setTpPip(pips) {
 }
 
 function syncPriceFromPip() {
-  const entry   = parseFloat(document.getElementById('f-entry').value);
+  const entryEl = document.getElementById('f-entry');
+  const entry   = parseFloat(entryEl?.value) || parseFloat(entryEl?.placeholder) || NaN;
   const slPips  = parseFloat(document.getElementById('f-sl-pip')?.value);
   const tpPips  = parseFloat(document.getElementById('f-tp-pip')?.value);
   const side    = document.getElementById('opt-buy')?.classList.contains('active') ? 'BUY' : 'SELL';
   const pip     = getPipSize();
   const cfg     = getPairConfig(document.getElementById('f-pair')?.value || 'XAU/USD');
 
-  if (!entry) return;
+  if (isNaN(entry)) return;
 
   const slPrice = !isNaN(slPips) ? (side === 'BUY' ? entry - slPips * pip : entry + slPips * pip) : null;
   const tpPrice = !isNaN(tpPips) ? (side === 'BUY' ? entry + tpPips * pip : entry - tpPips * pip) : null;
@@ -3560,11 +3561,12 @@ function syncPriceFromPip() {
 }
 
 function syncPipFromPrice() {
-  const entry  = parseFloat(document.getElementById('f-entry').value);
-  const sl     = parseFloat(document.getElementById('f-sl').value);
-  const tp     = parseFloat(document.getElementById('f-tp').value);
-  const pip    = getPipSize();
-  if (!entry) return;
+  const entryEl = document.getElementById('f-entry');
+  const entry   = parseFloat(entryEl?.value) || parseFloat(entryEl?.placeholder) || NaN;
+  const sl      = parseFloat(document.getElementById('f-sl').value);
+  const tp      = parseFloat(document.getElementById('f-tp').value);
+  const pip     = getPipSize();
+  if (isNaN(entry)) return;
   if (!isNaN(sl) && document.getElementById('f-sl-pip')) {
     document.getElementById('f-sl-pip').value = Math.round(Math.abs(entry - sl) / pip);
   }
@@ -3574,11 +3576,11 @@ function syncPipFromPrice() {
 }
 
 function autoCalcLot() {
-  // Suggest lot size from risk% and SL distance
-  const entry    = parseFloat(document.getElementById('f-entry').value);
+  const entryEl  = document.getElementById('f-entry');
+  const entry    = parseFloat(entryEl?.value) || parseFloat(entryEl?.placeholder) || NaN;
   const sl       = parseFloat(document.getElementById('f-sl').value);
   const riskPct  = parseFloat(document.getElementById('f-risk-pct')?.value || document.getElementById('f-risk-pct-pip')?.value);
-  if (!entry || !sl || !riskPct || !initialCapital) return;
+  if (isNaN(entry) || isNaN(sl) || !riskPct || !initialCapital) return;
   const riskDollar  = initialCapital * riskPct / 100;
   const slDistance  = Math.abs(entry - sl);
   const pair        = document.getElementById('f-pair')?.value || 'XAU/USD';
@@ -3672,9 +3674,13 @@ function updateSltpVisual(entry, sl, tp) {
 }
 
 function calcRR() {
-  const entry    = parseFloat(document.getElementById('f-entry').value);
-  const sl       = parseFloat(document.getElementById('f-sl').value);
-  const tp       = parseFloat(document.getElementById('f-tp').value) || null;
+  const entryEl  = document.getElementById('f-entry');
+  const slEl     = document.getElementById('f-sl');
+  const tpEl     = document.getElementById('f-tp');
+  // Use placeholder as fallback entry (it shows current market price)
+  const entry    = parseFloat(entryEl?.value) || parseFloat(entryEl?.placeholder) || NaN;
+  const sl       = parseFloat(slEl?.value) || NaN;
+  const tp       = parseFloat(tpEl?.value) || null;
   const riskPctEl = document.getElementById('f-risk-pct');
   const riskPipEl = document.getElementById('f-risk-pct-pip');
   const riskPct  = parseFloat((sltpMode === 'pip' ? riskPipEl : riskPctEl)?.value) || null;
