@@ -305,9 +305,9 @@
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 14px;
-    width: 640px;
-    max-width: 95vw;
-    max-height: 90vh;
+    width: 860px;
+    max-width: 96vw;
+    max-height: 92vh;
     overflow-y: auto;
     transform: translateY(20px);
     transition: transform .2s;
@@ -807,7 +807,40 @@
     display: none;
   }
 
-  /* ===== TRADE DETAIL PAGE ===== */
+  /* ===== TRADE JOURNAL TABS ===== */
+  .journal-tabs {
+    display: flex; gap: 0; margin-bottom: 0;
+    border-bottom: 2px solid var(--border);
+  }
+  .journal-tab {
+    padding: 8px 16px; font-size: 12px; font-weight: 600;
+    color: var(--muted); cursor: pointer; border: none;
+    background: none; font-family: 'Roboto'; letter-spacing: .3px;
+    border-bottom: 2px solid transparent; margin-bottom: -2px;
+    transition: color .15s, border-color .15s;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .journal-tab:hover { color: var(--text); }
+  .journal-tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .journal-tab .tab-dot {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--border); flex-shrink: 0; transition: background .15s;
+  }
+  .journal-tab.active .tab-dot { background: var(--accent); }
+  .journal-tab.has-content .tab-dot { background: var(--accent2); }
+
+  .journal-panel {
+    display: none; padding: 14px 0 0;
+  }
+  .journal-panel.active { display: block; }
+  .journal-panel textarea.form-textarea {
+    min-height: 100px;
+  }
+  .journal-section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: .5px;
+    text-transform: uppercase; color: var(--muted);
+    margin-bottom: 6px; display: block;
+  }
   #trade-detail-overlay {
     position: fixed; inset: 0; z-index: 2000;
     background: var(--bg);
@@ -2594,7 +2627,7 @@ function openModal() {
   document.getElementById('f-risk-pct').value = '';
   document.getElementById('f-strategy').value = '';
   document.getElementById('f-session').value = '';
-  document.getElementById('f-note').value = '';
+  clearJournalNote();
   currentImages = [];
   renderImgPreviews();
   setSide('BUY'); setResult('WIN');
@@ -2625,7 +2658,7 @@ function editTrade(idx) {
   document.getElementById('f-risk-pct').value = t.riskPct || '';
   document.getElementById('f-strategy').value = t.strategy || '';
   document.getElementById('f-session').value = t.session || '';
-  document.getElementById('f-note').value = t.note || '';
+  loadJournalNote(t.note || '');
   // images: support both old single-image and new array
   if (Array.isArray(t.images)) currentImages = [...t.images];
   else if (t.image) currentImages = [t.image];
@@ -2653,6 +2686,7 @@ function setResult(r) {
 }
 
 function saveTrade() {
+  syncJournalNote(); // merge 3 journal tabs → f-note hidden field
   const pnlRaw = parseFloat(document.getElementById('f-pnl').value);
   const pnlVal = isNaN(pnlRaw) ? null : pnlRaw;
 
@@ -2705,7 +2739,74 @@ function deleteTrade(idx) {
   renderTradeTable();
 }
 
-// ===== TRADE DETAIL PAGE =====
+// ===== TRADE JOURNAL TABS =====
+function switchJournalTab(tab) {
+  ['before','during','after'].forEach(t => {
+    document.getElementById('jtab-' + t)?.classList.toggle('active', t === tab);
+    document.getElementById('jpanel-' + t)?.classList.toggle('active', t === tab);
+  });
+}
+
+function updateJournalTab(tab) {
+  // Update dot indicator if content present
+  const el = document.getElementById('f-note-' + tab);
+  const btn = document.getElementById('jtab-' + tab);
+  if (!el || !btn) return;
+  btn.classList.toggle('has-content', el.value.trim().length > 0);
+  syncJournalNote();
+}
+
+function syncJournalNote() {
+  // Combine 3 sections into f-note hidden field as structured text
+  const before = document.getElementById('f-note-before')?.value.trim() || '';
+  const during = document.getElementById('f-note-during')?.value.trim() || '';
+  const after  = document.getElementById('f-note-after')?.value.trim() || '';
+  const parts = [];
+  if (before) parts.push('[Before]\n' + before);
+  if (during) parts.push('[During]\n' + during);
+  if (after)  parts.push('[After]\n' + after);
+  const noteEl = document.getElementById('f-note');
+  if (noteEl) noteEl.value = parts.join('\n\n');
+}
+
+function loadJournalNote(noteStr) {
+  // Parse structured note back into 3 fields
+  const beforeMatch = noteStr.match(/\[Before\]\n([\s\S]*?)(?=\[During\]|\[After\]|$)/);
+  const duringMatch = noteStr.match(/\[During\]\n([\s\S]*?)(?=\[After\]|$)/);
+  const afterMatch  = noteStr.match(/\[After\]\n([\s\S]*?)$/);
+
+  const setField = (id, val) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.value = val?.trim() || '';
+      document.getElementById('jtab-' + id.replace('f-note-',''))?.classList.toggle('has-content', el.value.length > 0);
+    }
+  };
+
+  if (beforeMatch || duringMatch || afterMatch) {
+    // Structured format
+    setField('f-note-before', beforeMatch?.[1] || '');
+    setField('f-note-during', duringMatch?.[1] || '');
+    setField('f-note-after',  afterMatch?.[1]  || '');
+  } else {
+    // Legacy: put entire note in Before tab
+    setField('f-note-before', noteStr || '');
+    setField('f-note-during', '');
+    setField('f-note-after', '');
+  }
+  switchJournalTab('before');
+}
+
+function clearJournalNote() {
+  ['before','during','after'].forEach(t => {
+    const el = document.getElementById('f-note-' + t);
+    if (el) el.value = '';
+    document.getElementById('jtab-' + t)?.classList.remove('has-content');
+  });
+  const noteEl = document.getElementById('f-note');
+  if (noteEl) noteEl.value = '';
+  switchJournalTab('before');
+}
 let tdCurrentIdx = -1;
 
 const MISTAKE_TAGS = [
@@ -3955,8 +4056,50 @@ window.addEventListener('DOMContentLoaded', () => {
       </div>
 
       <div class="form-group" style="margin-bottom:14px;">
-        <label class="form-label">Entry Reason / Note</label>
-        <textarea class="form-textarea" id="f-note" placeholder="Why did you enter this trade? Setup, context, confluences..."></textarea>
+        <label class="form-label">Trade Journal</label>
+
+        <!-- Tab bar -->
+        <div class="journal-tabs">
+          <button class="journal-tab active" id="jtab-before" onclick="switchJournalTab('before')">
+            <span class="tab-dot"></span> Before Entry
+          </button>
+          <button class="journal-tab" id="jtab-during" onclick="switchJournalTab('during')">
+            <span class="tab-dot"></span> During Trade
+          </button>
+          <button class="journal-tab" id="jtab-after" onclick="switchJournalTab('after')">
+            <span class="tab-dot"></span> After Exit
+          </button>
+        </div>
+
+        <!-- Panel: Before -->
+        <div class="journal-panel active" id="jpanel-before">
+          <span class="journal-section-label">Setup & Confluences</span>
+          <textarea class="form-textarea" id="f-note-before"
+            placeholder="• What's your setup/pattern?&#10;• Which confluences confirm entry?&#10;• What's the market context (HTF bias, key levels)?&#10;• Why are you taking this trade?"
+            oninput="updateJournalTab('before')"
+            style="min-height:110px;"></textarea>
+        </div>
+
+        <!-- Panel: During -->
+        <div class="journal-panel" id="jpanel-during">
+          <span class="journal-section-label">Trade Management</span>
+          <textarea class="form-textarea" id="f-note-during"
+            placeholder="• How did price behave after entry?&#10;• Did you move SL/TP? Why?&#10;• Did you partially close? Why?&#10;• How did you feel during the trade?"
+            oninput="updateJournalTab('during')"
+            style="min-height:110px;"></textarea>
+        </div>
+
+        <!-- Panel: After -->
+        <div class="journal-panel" id="jpanel-after">
+          <span class="journal-section-label">Review & Lessons</span>
+          <textarea class="form-textarea" id="f-note-after"
+            placeholder="• Was this a good trade? Why/why not?&#10;• Did you follow your plan?&#10;• What would you do differently?&#10;• Key lesson from this trade."
+            oninput="updateJournalTab('after')"
+            style="min-height:110px;"></textarea>
+        </div>
+
+        <!-- Hidden combined note field (saved to trade) -->
+        <input type="hidden" id="f-note">
       </div>
 
       <div class="form-group">
