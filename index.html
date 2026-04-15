@@ -307,7 +307,7 @@
     border-radius: 14px;
     width: 860px;
     max-width: 96vw;
-    max-height: 92vh;
+    max-height: 96vh;
     overflow-y: auto;
     transform: translateY(20px);
     transition: transform .2s;
@@ -834,7 +834,9 @@
   }
   .journal-panel.active { display: block; }
   .journal-panel textarea.form-textarea {
-    min-height: 100px;
+    min-height: 200px;
+    height: 200px;
+    resize: vertical;
   }
   .journal-section-label {
     font-size: 10px; font-weight: 700; letter-spacing: .5px;
@@ -4140,7 +4142,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           <textarea class="form-textarea" id="f-note-before"
             placeholder="• What's your setup/pattern?&#10;• Which confluences confirm entry?&#10;• What's the market context (HTF bias, key levels)?&#10;• Why are you taking this trade?"
             oninput="updateJournalTab('before')"
-            style="min-height:110px;"></textarea>
+            style="min-height:200px;height:200px;resize:vertical;"></textarea>
         </div>
 
         <!-- Panel: During -->
@@ -4149,7 +4151,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           <textarea class="form-textarea" id="f-note-during"
             placeholder="• How did price behave after entry?&#10;• Did you move SL/TP? Why?&#10;• Did you partially close? Why?&#10;• How did you feel during the trade?"
             oninput="updateJournalTab('during')"
-            style="min-height:110px;"></textarea>
+            style="min-height:200px;height:200px;resize:vertical;"></textarea>
         </div>
 
         <!-- Panel: After -->
@@ -4158,7 +4160,7 @@ window.addEventListener('DOMContentLoaded', async () => {
           <textarea class="form-textarea" id="f-note-after"
             placeholder="• Was this a good trade? Why/why not?&#10;• Did you follow your plan?&#10;• What would you do differently?&#10;• Key lesson from this trade."
             oninput="updateJournalTab('after')"
-            style="min-height:110px;"></textarea>
+            style="min-height:200px;height:200px;resize:vertical;"></textarea>
         </div>
 
         <!-- Hidden combined note field (saved to trade) -->
