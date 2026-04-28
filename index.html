@@ -1250,7 +1250,9 @@ function attachSyncListener() {
   syncListenerAttached = true;
   setSyncDot('syncing');
 
+  let isSaving = false; // flag to skip listener during our own save
   userDbRef.on('value', snap => {
+    if (isSaving) return; // skip — we triggered this ourselves
     const data = snap.val() || {};
     trades         = data.trades         ? JSON.parse(data.trades)     : [];
     strategies     = data.strategies     ? JSON.parse(data.strategies) : [...DEFAULT_STRATEGIES];
@@ -1263,11 +1265,19 @@ function attachSyncListener() {
     renderDashboard();
     renderTradeTable();
     renderCapitalReturn();
+    // Re-render strategy page if active
+    if (document.getElementById('page-strategy')?.classList.contains('active')) {
+      renderStratList();
+      if (activeStrategyName) renderStratDetail(activeStrategyName);
+    }
     setSyncDot('synced');
   }, err => {
     console.error('Sync error:', err);
     setSyncDot('offline');
   });
+
+  // Expose isSaving flag for cloudSave to use
+  window._setFbSaving = v => { isSaving = v; };
 }
 
 function setSyncDot(state) {
@@ -1288,13 +1298,20 @@ function cloudSave() {
     return;
   }
   setSyncDot('syncing');
+  window._setFbSaving?.(true);
   userDbRef.update({
     trades:     JSON.stringify(trades),
     strategies: JSON.stringify(strategies),
     capital:    initialCapital,
     updatedAt:  Date.now()
-  }).then(() => setSyncDot('synced'))
-    .catch(e => { console.error('Save error:', e); setSyncDot('offline'); });
+  }).then(() => {
+    setSyncDot('synced');
+    window._setFbSaving?.(false);
+  }).catch(e => {
+    console.error('Save error:', e);
+    setSyncDot('offline');
+    window._setFbSaving?.(false);
+  });
 }
 
 function loadFromLocalStorage(username) {
@@ -3169,14 +3186,20 @@ function populateStrategySelect() {
 function addStrategy() {
   const inp = document.getElementById('strat-new-input');
   const name = inp.value.trim();
-  if (!name) return;
-  if (strategies.includes(name)) { inp.value = ''; return; }
+  if (!name) { inp.focus(); return; }
+  if (strategies.includes(name)) {
+    inp.select();
+    inp.style.borderColor = 'var(--loss)';
+    setTimeout(() => inp.style.borderColor = '', 1000);
+    return;
+  }
   strategies.push(name);
-  saveStrategies();
   inp.value = '';
   populateStrategySelect();
-  renderStratList();
-  selectStrategy(name);
+  renderStratList();       // show immediately in UI
+  selectStrategy(name);    // auto-select the new one
+  cloudSave();             // persist (async, won't overwrite UI due to isSaving flag)
+  inp.focus();
 }
 
 function deleteStrategy(name, e) {
