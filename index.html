@@ -875,7 +875,9 @@
   /* TF image grid */
   .tf-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
   @media(max-width:800px){ .tf-grid { grid-template-columns:1fr 1fr; } }
-  .tf-cell { border:1px solid var(--border);border-radius:8px;overflow:hidden; }
+  .tf-cell { border:1px solid var(--border);border-radius:8px;overflow:hidden;transition:border-color .15s; }
+  .tf-cell:focus { outline:none;border-color:var(--accent);box-shadow:0 0 0 2px rgba(0,229,160,.15); }
+  .tf-cell:hover { border-color:rgba(0,229,160,.4); }
   .tf-label {
     font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
     padding:5px 10px;background:var(--surface2);color:var(--muted);
@@ -3721,19 +3723,36 @@ function djRenderContent(key, e) {
     <div class="dj-card">
       <div class="dj-section-title">📸 RSI + Bollinger Band — Đa khung</div>
       <div class="tf-grid" id="dj-tf-grid">
-        ${DJ_TFS.map(tf => `
-          <div class="tf-cell">
-            <div class="tf-label">${tf}</div>
-            <div class="tf-drop" id="tf-drop-${tf}" onclick="djTfClick('${tf}')"
-              ondragover="event.preventDefault()" ondrop="djTfDrop(event,'${tf}')">
-              ${e.tfImages?.[tf]
-                ? `<img src="${e.tfImages[tf]}" onclick="event.stopPropagation();openLightboxSingle('${e.tfImages[tf]}')" title="Click to zoom">
-                   <button onclick="event.stopPropagation();djClearTf('${tf}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">✕</button>`
-                : `<span class="tf-add-icon">📷</span><span style="font-size:11px;">Click or drag</span>`
-              }
+        ${DJ_TFS.map(tf => {
+          const imgs = Array.isArray(e.tfImages?.[tf]) ? e.tfImages[tf] : (e.tfImages?.[tf] ? [e.tfImages[tf]] : []);
+          return `
+          <div class="tf-cell" id="tf-cell-${tf}" tabindex="0"
+            ondragover="event.preventDefault();this.style.background='var(--surface2)'"
+            ondragleave="this.style.background=''"
+            ondrop="djTfDrop(event,'${tf}')"
+            onpaste="djTfPaste(event,'${tf}')"
+            onfocus="djSetActiveTf('${tf}')"
+            style="outline:none;cursor:pointer;"
+            onclick="djTfFocus('${tf}')">
+            <div class="tf-label" style="display:flex;align-items:center;justify-content:space-between;">
+              <span>${tf}</span>
+              <span style="font-size:9px;color:var(--muted);font-weight:400;">Ctrl+V · drag · click</span>
             </div>
-            <input type="file" id="tf-file-${tf}" accept="image/*" style="display:none" onchange="djTfFile(event,'${tf}')">
-          </div>`).join('')}
+            <div id="tf-imgs-${tf}" style="padding:6px;display:flex;flex-wrap:wrap;gap:4px;min-height:72px;align-items:flex-start;align-content:flex-start;position:relative;">
+              ${imgs.length ? imgs.map((src,ii) => `
+                <div style="position:relative;flex-shrink:0;">
+                  <img src="${src}" style="height:80px;width:auto;max-width:100%;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid var(--border);"
+                    onclick="event.stopPropagation();openLightboxArr(${ii},${JSON.stringify(imgs)})" title="Click to zoom">
+                  <button onclick="event.stopPropagation();djRemoveTfImg('${tf}',${ii})"
+                    style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;cursor:pointer;line-height:1.4;">✕</button>
+                </div>`).join('') : `
+              <div style="width:100%;text-align:center;padding:16px 0;color:var(--muted);font-size:11px;opacity:.6;pointer-events:none;">
+                <div style="font-size:22px;margin-bottom:4px;">📷</div>Ctrl+V hoặc kéo ảnh vào
+              </div>`}
+            </div>
+            <input type="file" id="tf-file-${tf}" accept="image/*" multiple style="display:none" onchange="djTfFile(event,'${tf}')">
+          </div>`;
+        }).join('')}
       </div>
       <textarea id="dj-tf-note" class="dj-textarea small" style="margin-top:12px;" placeholder="Tổng hợp đa khung:&#10;• Confluence giữa các TF?&#10;• RSI divergence ở đâu?&#10;• BB đang ở phase nào (trending/squeeze)?&#10;• Signal chính hôm nay?">${e.tfNote||''}</textarea>
     </div>
@@ -3776,10 +3795,9 @@ function djRenderContent(key, e) {
     <div style="height:60px;"></div>
   `;
 
-  // Attach paste handler for bias note
-  document.getElementById('dj-bias-note')?.addEventListener('paste', e => {
-    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
-    if (item) { e.preventDefault(); djHandleImageFile(item.getAsFile(), null); }
+  // Bias bias note auto-save on input
+  document.getElementById('dj-bias-note')?.addEventListener('input', () => {
+    if (dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate].biasNote = document.getElementById('dj-bias-note').value;
   });
 }
 
@@ -3799,42 +3817,103 @@ function djSwitchSession(sess) {
   });
 }
 
-function djTfClick(tf) {
+let djActiveTf = null; // currently focused TF cell
+
+function djSetActiveTf(tf) { djActiveTf = tf; }
+
+function djTfFocus(tf) {
+  djActiveTf = tf;
   document.getElementById('tf-file-' + tf)?.click();
 }
 
 function djTfFile(event, tf) {
-  const file = event.target.files?.[0];
-  if (!file) return;
-  djHandleImageFile(file, tf);
+  const files = Array.from(event.target.files || []);
+  files.forEach(f => { if (f.type.startsWith('image/')) djHandleImageFile(f, tf); });
+  event.target.value = ''; // reset so same file can be picked again
 }
 
 function djTfDrop(event, tf) {
   event.preventDefault();
-  const file = event.dataTransfer.files?.[0];
-  if (file?.type.startsWith('image/')) djHandleImageFile(file, tf);
+  const cell = document.getElementById('tf-cell-' + tf);
+  if (cell) cell.style.background = '';
+  const files = Array.from(event.dataTransfer.files || []);
+  files.forEach(f => { if (f.type.startsWith('image/')) djHandleImageFile(f, tf); });
 }
 
+function djTfPaste(event, tf) {
+  const items = Array.from(event.clipboardData?.items || []);
+  const imgItems = items.filter(i => i.type.startsWith('image/'));
+  if (!imgItems.length) return;
+  event.preventDefault();
+  imgItems.forEach(item => djHandleImageFile(item.getAsFile(), tf));
+}
+
+// Global paste — if a TF cell is focused, paste goes there
+document.addEventListener('paste', function(ev) {
+  // Don't intercept if user is typing in a textarea/input
+  const tag = document.activeElement?.tagName;
+  if (tag === 'TEXTAREA' || tag === 'INPUT') return;
+  if (!djCurrentDate || !djActiveTf) return;
+  const items = Array.from(ev.clipboardData?.items || []);
+  const imgItems = items.filter(i => i.type.startsWith('image/'));
+  if (!imgItems.length) return;
+  ev.preventDefault();
+  imgItems.forEach(item => djHandleImageFile(item.getAsFile(), djActiveTf));
+});
+
 function djHandleImageFile(file, tf) {
+  if (!file || !djCurrentDate) return;
   const reader = new FileReader();
   reader.onload = ev => {
     const src = ev.target.result;
     if (!dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate] = djEmptyEntry();
+    const entry = dailyJournals[djCurrentDate];
+    if (!entry.tfImages) entry.tfImages = {};
+
     if (tf) {
-      if (!dailyJournals[djCurrentDate].tfImages) dailyJournals[djCurrentDate].tfImages = {};
-      dailyJournals[djCurrentDate].tfImages[tf] = src;
+      // Migrate legacy single-string to array
+      if (!Array.isArray(entry.tfImages[tf])) {
+        entry.tfImages[tf] = entry.tfImages[tf] ? [entry.tfImages[tf]] : [];
+      }
+      entry.tfImages[tf].push(src);
+      // Update just this TF cell UI — fast, no full re-render
+      djRefreshTfCell(tf, entry.tfImages[tf]);
     }
-    // Re-render TF grid only
-    djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+    entry.updatedAt = Date.now();
     cloudSave();
   };
   reader.readAsDataURL(file);
 }
 
+function djRefreshTfCell(tf, imgs) {
+  const container = document.getElementById('tf-imgs-' + tf);
+  if (!container) return;
+  if (!imgs || !imgs.length) {
+    container.innerHTML = `<div style="width:100%;text-align:center;padding:16px 0;color:var(--muted);font-size:11px;opacity:.6;pointer-events:none;"><div style="font-size:22px;margin-bottom:4px;">📷</div>Ctrl+V hoặc kéo ảnh vào</div>`;
+    return;
+  }
+  container.innerHTML = imgs.map((src, ii) => `
+    <div style="position:relative;flex-shrink:0;">
+      <img src="${src}" style="height:80px;width:auto;max-width:100%;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid var(--border);"
+        onclick="event.stopPropagation();openLightboxArr(${ii},${JSON.stringify(imgs).replace(/"/g,'&quot;')})" title="Click to zoom">
+      <button onclick="event.stopPropagation();djRemoveTfImg('${tf}',${ii})"
+        style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;cursor:pointer;line-height:1.4;">✕</button>
+    </div>`).join('');
+}
+
+function djRemoveTfImg(tf, idx) {
+  if (!dailyJournals[djCurrentDate]?.tfImages?.[tf]) return;
+  const imgs = dailyJournals[djCurrentDate].tfImages[tf];
+  if (!Array.isArray(imgs)) return;
+  imgs.splice(idx, 1);
+  djRefreshTfCell(tf, imgs);
+  cloudSave();
+}
+
 function djClearTf(tf) {
   if (!dailyJournals[djCurrentDate]?.tfImages) return;
-  delete dailyJournals[djCurrentDate].tfImages[tf];
-  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+  dailyJournals[djCurrentDate].tfImages[tf] = [];
+  djRefreshTfCell(tf, []);
   cloudSave();
 }
 
