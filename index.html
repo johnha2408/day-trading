@@ -909,6 +909,22 @@
   }
   .dj-new-btn:hover { background:rgba(0,229,160,.15); }
 
+  .dj-note-rendered {
+    font-size:14px;line-height:1.85;color:var(--text);
+    padding:12px 14px;background:var(--bg);
+    border-radius:8px;border:1px solid var(--border);
+    min-height:60px;
+  }
+  .dj-note-sm { font-size:13px;line-height:1.7; }
+  .dj-session-block { padding:12px 14px;background:var(--bg);border-radius:8px;border:1px solid var(--border); }
+  .dj-submit-btn {
+    background:var(--accent);border:none;border-radius:6px;
+    padding:7px 18px;color:#0a0c10;font-family:'Roboto';font-size:12px;
+    font-weight:700;cursor:pointer;transition:background .15s;
+  }
+  .dj-submit-btn:hover { background:#00ffb3; }
+  .tf-cell.tf-drag-over { border-color:var(--accent);background:rgba(0,229,160,.08); }
+
   .dj-save-btn {
     background:var(--accent);border:none;border-radius:8px;padding:9px 20px;
     color:#0a0c10;font-family:'Roboto';font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;
@@ -3632,18 +3648,23 @@ function djEmptyEntry() {
 
 function djSaveCurrent() {
   if (!djCurrentDate) return;
-  const e = dailyJournals[djCurrentDate];
-  e.bias      = document.querySelector('.bias-btn.active')?.dataset.bias || '';
-  e.biasNote  = document.getElementById('dj-bias-note')?.value || '';
-  e.tfNote    = document.getElementById('dj-tf-note')?.value || '';
-  e.sessionPlan.london = document.getElementById('dj-sess-london')?.value || '';
-  e.sessionPlan.ny     = document.getElementById('dj-sess-ny')?.value    || '';
-  e.sessionPlan.asia   = document.getElementById('dj-sess-asia')?.value  || '';
+  const e = dailyJournals[djCurrentDate] || (dailyJournals[djCurrentDate] = djEmptyEntry());
+  // Save bias toggle
+  e.bias = document.querySelector('.bias-btn.active')?.dataset.bias || e.bias || '';
+  // Save any still-open textarea content
+  const biasTA = document.getElementById('dj-bias-note');
+  if (biasTA && biasTA.style.display !== 'none') e.biasNote = biasTA.value.trim();
+  Object.keys(DJ_SESSION_LABELS).forEach(k => {
+    const ta = document.getElementById('dj-sess-' + k);
+    if (ta && ta.style.display !== 'none') {
+      if (!e.sessionPlan) e.sessionPlan = {};
+      e.sessionPlan[k] = ta.value.trim();
+    }
+  });
   e.updatedAt = Date.now();
   cloudSave();
   djRenderSidebar();
-  const btn = document.getElementById('dj-save-btn');
-  if (btn) { btn.textContent = '✓ Saved!'; btn.style.background='var(--win)'; setTimeout(()=>{btn.textContent='💾 Save Journal';btn.style.background='';},1500); }
+  djRenderContent(djCurrentDate, e);
 }
 
 function djOpenDate(key) {
@@ -3705,21 +3726,32 @@ function djRenderContent(key, e) {
         ${todayTrades.length ? `<span class="dj-stat-pill" style="color:${totalPnl>=0?'var(--win)':'var(--loss)'};border-color:${totalPnl>=0?'var(--win)':'var(--loss)'};">${totalPnl>=0?'+':''}\$${totalPnl.toFixed(2)}</span>` : ''}
         ${todayTrades.length ? `<span class="dj-stat-pill">${wins}W / ${todayTrades.length-wins}L</span>` : ''}
       </div>
-      <button class="dj-save-btn" id="dj-save-btn" onclick="djSaveCurrent()" style="margin-left:auto;">💾 Save Journal</button>
     </div>
 
     <!-- MARKET BIAS -->
     <div class="dj-card">
-      <div class="dj-section-title">📊 Market Bias & Analysis</div>
+      <div class="dj-section-title">📊 Market Bias & Analysis
+        <span id="bias-edit-btn" onclick="djBiasEdit()" style="margin-left:auto;font-size:11px;font-weight:600;color:var(--accent2);cursor:pointer;padding:2px 10px;border:1px solid rgba(14,165,233,.3);border-radius:5px;text-transform:none;letter-spacing:0;">${e.biasNote ? '✏️ Edit' : ''}</span>
+      </div>
       <div class="bias-row">
         <button class="bias-btn bullish ${e.bias==='bullish'?'active':''}" data-bias="bullish" onclick="djSetBias(this)">▲ Bullish</button>
         <button class="bias-btn neutral ${e.bias==='neutral'?'active':''}" data-bias="neutral" onclick="djSetBias(this)">◆ Neutral</button>
         <button class="bias-btn bearish ${e.bias==='bearish'?'active':''}" data-bias="bearish" onclick="djSetBias(this)">▼ Bearish</button>
       </div>
-      <textarea id="dj-bias-note" class="dj-textarea" placeholder="HTF outlook, tổng quan thị trường hôm nay&#10;• XAU/USD đang ở đâu trong cấu trúc lớn?&#10;• Trend D1/W1 đang chỉ hướng nào?&#10;• Có news quan trọng không?&#10;• Kế hoạch tổng thể hôm nay là gì?">${e.biasNote||''}</textarea>
+
+      ${e.biasNote
+        ? `<!-- VIEW MODE -->
+           <div id="bias-view" class="dj-note-rendered">${djRenderText(e.biasNote)}</div>
+           <textarea id="dj-bias-note" class="dj-textarea" style="display:none;" placeholder="HTF outlook...">${e.biasNote}</textarea>`
+        : `<!-- WRITE MODE -->
+           <textarea id="dj-bias-note" class="dj-textarea" placeholder="HTF outlook, tổng quan thị trường hôm nay&#10;• XAU/USD đang ở đâu trong cấu trúc lớn?&#10;• Trend D1/W1 đang chỉ hướng nào?&#10;• Có news quan trọng không?&#10;• Kế hoạch tổng thể hôm nay là gì?"></textarea>
+           <div style="display:flex;gap:8px;margin-top:10px;">
+             <button class="dj-submit-btn" onclick="djBiasSubmit()">✓ Submit</button>
+           </div>`
+      }
     </div>
 
-    <!-- RSI + BB MULTI-TF IMAGES -->
+    <!-- RSI + BB IMAGES ONLY (no textarea) -->
     <div class="dj-card">
       <div class="dj-section-title">📸 RSI + Bollinger Band — Đa khung</div>
       <div class="tf-grid" id="dj-tf-grid">
@@ -3727,48 +3759,60 @@ function djRenderContent(key, e) {
           const imgs = Array.isArray(e.tfImages?.[tf]) ? e.tfImages[tf] : (e.tfImages?.[tf] ? [e.tfImages[tf]] : []);
           return `
           <div class="tf-cell" id="tf-cell-${tf}" tabindex="0"
-            ondragover="event.preventDefault();this.style.background='var(--surface2)'"
-            ondragleave="this.style.background=''"
+            ondragover="event.preventDefault();this.classList.add('tf-drag-over')"
+            ondragleave="this.classList.remove('tf-drag-over')"
             ondrop="djTfDrop(event,'${tf}')"
             onpaste="djTfPaste(event,'${tf}')"
             onfocus="djSetActiveTf('${tf}')"
-            style="outline:none;cursor:pointer;"
-            onclick="djTfFocus('${tf}')">
+            style="outline:none;">
             <div class="tf-label" style="display:flex;align-items:center;justify-content:space-between;">
               <span>${tf}</span>
-              <span style="font-size:9px;color:var(--muted);font-weight:400;">Ctrl+V · drag · click</span>
+              <span style="font-size:9px;color:var(--muted);font-weight:400;cursor:pointer;" onclick="document.getElementById('tf-file-${tf}').click()">Ctrl+V · drag · click</span>
             </div>
-            <div id="tf-imgs-${tf}" style="padding:6px;display:flex;flex-wrap:wrap;gap:4px;min-height:72px;align-items:flex-start;align-content:flex-start;position:relative;">
+            <div id="tf-imgs-${tf}" style="padding:6px;display:flex;flex-wrap:wrap;gap:4px;min-height:90px;align-items:flex-start;align-content:flex-start;">
               ${imgs.length ? imgs.map((src,ii) => `
                 <div style="position:relative;flex-shrink:0;">
-                  <img src="${src}" style="height:80px;width:auto;max-width:100%;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid var(--border);"
-                    onclick="event.stopPropagation();openLightboxArr(${ii},${JSON.stringify(imgs)})" title="Click to zoom">
+                  <img src="${src}" style="height:90px;width:auto;max-width:200px;object-fit:cover;border-radius:5px;cursor:zoom-in;border:1px solid var(--border);"
+                    onclick="event.stopPropagation();openLightboxArr(${ii},${JSON.stringify(imgs).replace(/"/g,'&quot;')})" title="Click to zoom">
                   <button onclick="event.stopPropagation();djRemoveTfImg('${tf}',${ii})"
                     style="position:absolute;top:2px;right:2px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:3px;padding:1px 5px;font-size:10px;cursor:pointer;line-height:1.4;">✕</button>
                 </div>`).join('') : `
-              <div style="width:100%;text-align:center;padding:16px 0;color:var(--muted);font-size:11px;opacity:.6;pointer-events:none;">
-                <div style="font-size:22px;margin-bottom:4px;">📷</div>Ctrl+V hoặc kéo ảnh vào
+              <div onclick="document.getElementById('tf-file-${tf}').click()" style="width:100%;text-align:center;padding:20px 0;color:var(--muted);font-size:11px;cursor:pointer;">
+                <div style="font-size:22px;margin-bottom:4px;opacity:.4;">📷</div>Ctrl+V · kéo thả · click
               </div>`}
             </div>
             <input type="file" id="tf-file-${tf}" accept="image/*" multiple style="display:none" onchange="djTfFile(event,'${tf}')">
           </div>`;
         }).join('')}
       </div>
-      <textarea id="dj-tf-note" class="dj-textarea small" style="margin-top:12px;" placeholder="Tổng hợp đa khung:&#10;• Confluence giữa các TF?&#10;• RSI divergence ở đâu?&#10;• BB đang ở phase nào (trending/squeeze)?&#10;• Signal chính hôm nay?">${e.tfNote||''}</textarea>
     </div>
 
-    <!-- SESSION PLAN -->
+    <!-- SESSION PLAN (3 cards, view/edit each) -->
     <div class="dj-card">
       <div class="dj-section-title">🗓 Session Plan</div>
-      <div class="session-tabs">
-        ${Object.entries(DJ_SESSION_LABELS).map(([k,label]) =>
-          `<button class="session-tab ${k===djActiveSession?'active':''} ${e.sessionPlan?.[k]?'has-content':''}" data-sess="${k}" onclick="djSwitchSession('${k}')">${label}</button>`
-        ).join('')}
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${Object.entries(DJ_SESSION_LABELS).map(([k, label]) => {
+          const val = e.sessionPlan?.[k] || '';
+          return `<div class="dj-session-block" id="sess-block-${k}">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+              <span style="font-size:12px;font-weight:700;color:var(--accent2);">${label}</span>
+              ${val ? `<button onclick="djSessEdit('${k}')" style="font-size:11px;color:var(--muted);background:none;border:none;cursor:pointer;padding:0;">✏️ Edit</button>` : ''}
+            </div>
+            ${val
+              ? `<div id="sess-view-${k}" class="dj-note-rendered dj-note-sm">${djRenderText(val)}</div>
+                 <textarea id="dj-sess-${k}" class="dj-textarea small" style="display:none;">${val}</textarea>
+                 <div id="sess-actions-${k}" style="display:none;gap:8px;margin-top:8px;">
+                   <button class="dj-submit-btn" onclick="djSessSubmit('${k}')">✓ Update</button>
+                   <button onclick="djSessCancel('${k}')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--muted);cursor:pointer;">Cancel</button>
+                 </div>`
+              : `<textarea id="dj-sess-${k}" class="dj-textarea small" placeholder="Kế hoạch phiên ${k.toUpperCase()}:&#10;• Setup cần watch là gì?&#10;• Điều kiện vào lệnh?&#10;• Risk tối đa phiên này?"></textarea>
+                 <div style="display:flex;gap:8px;margin-top:8px;">
+                   <button class="dj-submit-btn" onclick="djSessSubmit('${k}')">✓ Submit</button>
+                 </div>`
+            }
+          </div>`;
+        }).join('')}
       </div>
-      ${Object.keys(DJ_SESSION_LABELS).map(k =>
-        `<textarea id="dj-sess-${k}" class="dj-textarea ${k!==djActiveSession?'hidden':''}" style="${k!==djActiveSession?'display:none':''}"
-          placeholder="Kế hoạch phiên ${k.toUpperCase()}:&#10;• Setup cần watch là gì?&#10;• Level quan trọng cần phá vỡ?&#10;• Điều kiện để vào lệnh?&#10;• Risk tối đa phiên này?"
-        >${e.sessionPlan?.[k]||''}</textarea>`).join('')}
     </div>
 
     <!-- TODAY'S TRADES -->
@@ -3795,26 +3839,95 @@ function djRenderContent(key, e) {
     <div style="height:60px;"></div>
   `;
 
-  // Bias bias note auto-save on input
   document.getElementById('dj-bias-note')?.addEventListener('input', () => {
     if (dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate].biasNote = document.getElementById('dj-bias-note').value;
   });
 }
 
+// Render plain text as formatted HTML (newlines, bullets)
+function djRenderText(text) {
+  if (!text) return '';
+  return text
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .split('\n')
+    .map(line => {
+      line = line.trim();
+      if (!line) return '<br>';
+      if (line.startsWith('•') || line.startsWith('-') || line.startsWith('*')) {
+        const content = line.replace(/^[•\-\*]\s*/,'');
+        return `<div style="display:flex;gap:8px;margin:2px 0;"><span style="color:var(--accent);flex-shrink:0;">•</span><span>${content}</span></div>`;
+      }
+      return `<div style="margin:2px 0;">${line}</div>`;
+    }).join('');
+}
+
 function djSetBias(btn) {
   document.querySelectorAll('.bias-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
+  // Auto-save bias selection
+  if (dailyJournals[djCurrentDate]) {
+    dailyJournals[djCurrentDate].bias = btn.dataset.bias;
+    cloudSave();
+  }
 }
 
-function djSwitchSession(sess) {
-  djActiveSession = sess;
-  document.querySelectorAll('.session-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.sess === sess);
-  });
-  document.querySelectorAll('[id^="dj-sess-"]').forEach(ta => {
-    const k = ta.id.replace('dj-sess-','');
-    ta.style.display = k === sess ? '' : 'none';
-  });
+// Bias note submit/edit
+function djBiasSubmit() {
+  const ta = document.getElementById('dj-bias-note');
+  const text = ta?.value?.trim() || '';
+  if (!text) return;
+  if (!dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate] = djEmptyEntry();
+  dailyJournals[djCurrentDate].biasNote = text;
+  cloudSave();
+  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+}
+
+function djBiasEdit() {
+  const view = document.getElementById('bias-view');
+  const ta   = document.getElementById('dj-bias-note');
+  const btn  = document.getElementById('bias-edit-btn');
+  if (!view || !ta) return;
+  view.style.display = 'none';
+  ta.style.display = '';
+  ta.focus();
+  if (btn) btn.style.display = 'none';
+  // Show submit button
+  const actionsEl = document.createElement('div');
+  actionsEl.id = 'bias-actions';
+  actionsEl.style.cssText = 'display:flex;gap:8px;margin-top:10px;';
+  actionsEl.innerHTML = `
+    <button class="dj-submit-btn" onclick="djBiasSubmit()">✓ Submit</button>
+    <button onclick="djBiasCancel()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:7px 14px;font-size:12px;color:var(--muted);cursor:pointer;">Cancel</button>`;
+  ta.insertAdjacentElement('afterend', actionsEl);
+}
+
+function djBiasCancel() {
+  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+}
+
+// Session submit/edit
+function djSessSubmit(k) {
+  const ta = document.getElementById('dj-sess-' + k);
+  const text = ta?.value?.trim() || '';
+  if (!dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate] = djEmptyEntry();
+  if (!dailyJournals[djCurrentDate].sessionPlan) dailyJournals[djCurrentDate].sessionPlan = {};
+  dailyJournals[djCurrentDate].sessionPlan[k] = text;
+  cloudSave();
+  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+}
+
+function djSessEdit(k) {
+  const view    = document.getElementById('sess-view-' + k);
+  const ta      = document.getElementById('dj-sess-' + k);
+  const actions = document.getElementById('sess-actions-' + k);
+  if (view)    view.style.display = 'none';
+  if (ta)      ta.style.display = '';
+  if (actions) actions.style.display = 'flex';
+  ta?.focus();
+}
+
+function djSessCancel(k) {
+  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
 }
 
 let djActiveTf = null; // currently focused TF cell
