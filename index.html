@@ -807,7 +807,113 @@
     display: none;
   }
 
-  /* ===== SLTP MODE TOGGLE & PIP PRESETS ===== */
+  /* ===== DAILY JOURNAL ===== */
+  .dj-layout { display: grid; grid-template-columns: 260px 1fr; gap: 0; height: 100%; min-height: calc(100vh - 120px); }
+  .dj-sidebar { border-right: 1px solid var(--border); padding: 0 12px 20px 0; overflow-y: auto; }
+  .dj-content { padding: 0 0 40px 24px; overflow-y: auto; }
+  .dj-date-btn {
+    width: 100%; text-align: left; background: none; border: none;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    font-family: 'Roboto'; font-size: 13px; color: var(--muted);
+    transition: all .15s; display: flex; align-items: center; justify-content: space-between;
+    border: 1px solid transparent; margin-bottom: 2px;
+  }
+  .dj-date-btn:hover { background: var(--surface2); color: var(--text); }
+  .dj-date-btn.active { background: rgba(0,229,160,.1); color: var(--accent); border-color: rgba(0,229,160,.25); font-weight: 600; }
+  .dj-date-btn .dj-dot { width:6px;height:6px;border-radius:50%;background:var(--accent);flex-shrink:0; }
+  .dj-month-label { font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px;margin-top:4px; }
+
+  .dj-hero { display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap; }
+  .dj-hero-date { font-size:22px;font-weight:800;color:var(--text); }
+  .dj-hero-stats { display:flex;gap:8px;flex-wrap:wrap; }
+  .dj-stat-pill {
+    font-size:12px;font-weight:600;padding:4px 12px;border-radius:20px;
+    background:var(--surface2);color:var(--muted);border:1px solid var(--border);
+  }
+
+  .dj-section { margin-bottom:20px; }
+  .dj-section-title {
+    font-size:10px;font-weight:700;letter-spacing:.6px;text-transform:uppercase;
+    color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px;
+  }
+  .dj-card { background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:14px; }
+
+  /* Bias selector */
+  .bias-row { display:flex;gap:8px;margin-bottom:12px; }
+  .bias-btn {
+    padding:6px 16px;border-radius:20px;font-size:12px;font-weight:600;
+    border:1px solid var(--border);cursor:pointer;background:var(--surface2);
+    color:var(--muted);font-family:'Roboto';transition:all .15s;
+  }
+  .bias-btn.bullish.active { background:rgba(34,197,94,.15);color:var(--win);border-color:var(--win); }
+  .bias-btn.neutral.active { background:rgba(245,158,11,.12);color:var(--warn);border-color:var(--warn); }
+  .bias-btn.bearish.active { background:rgba(244,63,94,.12);color:var(--loss);border-color:var(--loss); }
+
+  /* Big note textarea */
+  .dj-textarea {
+    width:100%;background:var(--surface2);border:1px solid var(--border);
+    border-radius:8px;color:var(--text);font-family:'Roboto',sans-serif;
+    font-size:14px;line-height:1.8;padding:14px 16px;outline:none;
+    resize:vertical;min-height:160px;transition:border-color .15s;
+    box-sizing:border-box;
+  }
+  .dj-textarea:focus { border-color:var(--accent); }
+  .dj-textarea.small { min-height:80px;font-size:13px; }
+
+  /* Session plan tabs */
+  .session-tabs { display:flex;gap:0;border-bottom:1px solid var(--border);margin-bottom:12px; }
+  .session-tab {
+    padding:7px 16px;font-size:12px;font-weight:600;cursor:pointer;
+    border:none;background:none;font-family:'Roboto';color:var(--muted);
+    border-bottom:2px solid transparent;margin-bottom:-1px;transition:all .15s;
+  }
+  .session-tab.active { color:var(--accent);border-bottom-color:var(--accent); }
+  .session-tab .s-dot { display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--border);margin-right:5px;transition:background .15s; }
+  .session-tab.active .s-dot { background:var(--accent); }
+  .session-tab.has-content .s-dot { background:var(--accent2); }
+
+  /* TF image grid */
+  .tf-grid { display:grid;grid-template-columns:repeat(3,1fr);gap:10px; }
+  @media(max-width:800px){ .tf-grid { grid-template-columns:1fr 1fr; } }
+  .tf-cell { border:1px solid var(--border);border-radius:8px;overflow:hidden; }
+  .tf-label {
+    font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;
+    padding:5px 10px;background:var(--surface2);color:var(--muted);
+    border-bottom:1px solid var(--border);
+  }
+  .tf-drop {
+    min-height:80px;display:flex;align-items:center;justify-content:center;
+    font-size:12px;color:var(--muted);cursor:pointer;position:relative;
+    transition:background .15s;flex-direction:column;gap:6px;padding:8px;
+  }
+  .tf-drop:hover { background:var(--surface2); }
+  .tf-drop img { width:100%;height:90px;object-fit:cover;display:block;cursor:zoom-in; }
+  .tf-drop .tf-add-icon { font-size:20px;opacity:.4; }
+
+  /* Day trades list */
+  .dj-trade-row {
+    display:flex;align-items:center;gap:10px;padding:9px 12px;
+    background:var(--surface2);border-radius:8px;margin-bottom:6px;cursor:pointer;
+    transition:background .15s;border:1px solid transparent;
+  }
+  .dj-trade-row:hover { background:rgba(0,229,160,.06);border-color:rgba(0,229,160,.2); }
+
+  /* New day btn */
+  .dj-new-btn {
+    width:100%;padding:8px;border-radius:8px;
+    background:rgba(0,229,160,.08);border:1px dashed rgba(0,229,160,.3);
+    color:var(--accent);font-family:'Roboto';font-size:12px;font-weight:600;
+    cursor:pointer;transition:all .15s;margin-bottom:10px;
+  }
+  .dj-new-btn:hover { background:rgba(0,229,160,.15); }
+
+  .dj-save-btn {
+    background:var(--accent);border:none;border-radius:8px;padding:9px 20px;
+    color:#0a0c10;font-family:'Roboto';font-size:13px;font-weight:700;cursor:pointer;transition:background .15s;
+  }
+  .dj-save-btn:hover { background:#00ffb3; }
+  .dj-empty { text-align:center;padding:60px 20px;color:var(--muted); }
+  .dj-empty-icon { font-size:40px;margin-bottom:12px; }
   .sltp-mode-btn {
     padding: 4px 12px; font-size: 11px; font-weight: 600;
     background: none; border: none; color: var(--muted);
@@ -1257,6 +1363,7 @@ function attachSyncListener() {
     trades         = data.trades         ? JSON.parse(data.trades)     : [];
     strategies     = data.strategies     ? JSON.parse(data.strategies) : [...DEFAULT_STRATEGIES];
     initialCapital = data.capital        ? parseFloat(data.capital)    : 0;
+    dailyJournals  = data.journals       ? JSON.parse(data.journals)   : {};
 
     // Update UI
     const capInp = document.getElementById('capital-input');
@@ -1295,6 +1402,7 @@ function cloudSave() {
     localStorage.setItem('fxj_trades_' + (currentUser?.username||'default'), JSON.stringify(trades));
     localStorage.setItem('fxj_strategies_' + (currentUser?.username||'default'), JSON.stringify(strategies));
     localStorage.setItem('fxj_capital_' + (currentUser?.username||'default'), initialCapital);
+    localStorage.setItem('fxj_journals_' + (currentUser?.username||'default'), JSON.stringify(dailyJournals));
     return;
   }
   setSyncDot('syncing');
@@ -1303,6 +1411,7 @@ function cloudSave() {
     trades:     JSON.stringify(trades),
     strategies: JSON.stringify(strategies),
     capital:    initialCapital,
+    journals:   JSON.stringify(dailyJournals),
     updatedAt:  Date.now()
   }).then(() => {
     setSyncDot('synced');
@@ -1319,6 +1428,7 @@ function loadFromLocalStorage(username) {
   trades         = JSON.parse(localStorage.getItem('fxj_trades_' + key) || localStorage.getItem('fxj_trades') || '[]');
   strategies     = JSON.parse(localStorage.getItem('fxj_strategies_' + key) || localStorage.getItem('fxj_strategies') || 'null') || [...DEFAULT_STRATEGIES];
   initialCapital = parseFloat(localStorage.getItem('fxj_capital_' + key) || localStorage.getItem('fxj_capital') || '0');
+  dailyJournals  = JSON.parse(localStorage.getItem('fxj_journals_' + key) || '{}');
   const capInp = document.getElementById('capital-input');
   if (capInp && initialCapital) capInp.value = initialCapital;
   populateStrategySelect();
@@ -1963,7 +2073,8 @@ function openDayModal(dateKey) {
   document.getElementById('day-modal-sub').innerHTML = `
     <span style="color:${pnlColor};font-family:'Roboto Mono';font-weight:700;">${sign}$${totalPnl.toFixed(2)}</span>
     &nbsp;·&nbsp; ${dayTrades.length} trade${dayTrades.length!==1?'s':''}
-    &nbsp;·&nbsp; <span style="color:var(--win);">${wins}W</span> <span style="color:var(--loss);">${losses}L</span>`;
+    &nbsp;·&nbsp; <span style="color:var(--win);">${wins}W</span> <span style="color:var(--loss);">${losses}L</span>
+    &nbsp;·&nbsp; <button onclick="djOpenFromCalendar('${dateKey}')" style="background:rgba(0,229,160,.12);border:1px solid rgba(0,229,160,.3);color:var(--accent);font-size:11px;font-weight:600;padding:3px 10px;border-radius:6px;cursor:pointer;font-family:'Roboto';">📓 Open Journal</button>`;
 
   if (!dayTrades.length) {
     document.getElementById('day-modal-body').innerHTML = '<div class="empty-state"><div class="empty-icon">📭</div><div class="empty-text">No trades on this day.</div></div>';
@@ -2027,13 +2138,14 @@ function showPage(page, el) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   document.getElementById('page-' + page).classList.add('active');
-  el.classList.add('active');
-  document.getElementById('page-title').textContent = el.querySelector('.nav-icon').nextSibling.textContent.trim();
+  if (el) el.classList.add('active');
+  document.getElementById('page-title').textContent = el?.querySelector('.nav-icon')?.nextSibling?.textContent?.trim() || page;
   if (page === 'dashboard') renderDashboard();
   if (page === 'trades')    renderTradeTable();
   if (page === 'stats')     renderStats();
   if (page === 'calendar')  renderCalendar();
   if (page === 'strategy')  { renderStratList(); if (activeStrategyName) renderStratDetail(activeStrategyName); }
+  if (page === 'journal')   renderJournal();
 }
 
 // ===== PERIOD =====
@@ -3485,6 +3597,263 @@ function editStrategyName(oldName) {
   selectStrategy(trimmed);
 }
 
+// ===== DAILY JOURNAL =====
+let dailyJournals = {};   // { 'YYYY-MM-DD': { bias, biasNote, sessionPlan:{london,ny,asia}, tfImages:{M5,M15,H1,H4,D1,W1}, tfNote, images:[], updatedAt } }
+let djCurrentDate = null; // currently open date key
+let djActiveSession = 'london';
+
+const DJ_TFS = ['M5','M15','H1','H4','D1','W1'];
+const DJ_SESSION_LABELS = { london: '🇬🇧 London', ny: '🇺🇸 New York', asia: '🌏 Asia' };
+
+function djDateKey(d) {
+  const dt = d || new Date();
+  return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}-${String(dt.getDate()).padStart(2,'0')}`;
+}
+
+function djFmtKey(k) {
+  const [y,m,d] = k.split('-');
+  const dt = new Date(y, m-1, d);
+  return dt.toLocaleDateString('en-US', { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+}
+
+function djNewToday() {
+  const key = djDateKey();
+  if (!dailyJournals[key]) dailyJournals[key] = djEmptyEntry();
+  djOpenDate(key);
+  showPage('journal', document.querySelector('.nav-item:nth-child(6)'));
+}
+
+function djEmptyEntry() {
+  return { bias: '', biasNote: '', sessionPlan: { london:'', ny:'', asia:'' },
+           tfImages: {}, tfNote: '', images: [], updatedAt: Date.now() };
+}
+
+function djSaveCurrent() {
+  if (!djCurrentDate) return;
+  const e = dailyJournals[djCurrentDate];
+  e.bias      = document.querySelector('.bias-btn.active')?.dataset.bias || '';
+  e.biasNote  = document.getElementById('dj-bias-note')?.value || '';
+  e.tfNote    = document.getElementById('dj-tf-note')?.value || '';
+  e.sessionPlan.london = document.getElementById('dj-sess-london')?.value || '';
+  e.sessionPlan.ny     = document.getElementById('dj-sess-ny')?.value    || '';
+  e.sessionPlan.asia   = document.getElementById('dj-sess-asia')?.value  || '';
+  e.updatedAt = Date.now();
+  cloudSave();
+  djRenderSidebar();
+  const btn = document.getElementById('dj-save-btn');
+  if (btn) { btn.textContent = '✓ Saved!'; btn.style.background='var(--win)'; setTimeout(()=>{btn.textContent='💾 Save Journal';btn.style.background='';},1500); }
+}
+
+function djOpenDate(key) {
+  djCurrentDate = key;
+  const e = dailyJournals[key] || djEmptyEntry();
+  djRenderSidebar();
+  djRenderContent(key, e);
+}
+
+function djRenderSidebar() {
+  const keys = Object.keys(dailyJournals).sort((a,b) => b.localeCompare(a));
+  const today = djDateKey();
+  const el = document.getElementById('dj-date-list');
+  if (!el) return;
+  if (!keys.length) { el.innerHTML = '<div style="font-size:12px;color:var(--muted);padding:8px 10px;">No entries yet</div>'; return; }
+
+  // Group by month
+  const byMonth = {};
+  keys.forEach(k => {
+    const mon = k.slice(0,7);
+    if (!byMonth[mon]) byMonth[mon] = [];
+    byMonth[mon].push(k);
+  });
+
+  el.innerHTML = Object.keys(byMonth).sort((a,b)=>b.localeCompare(a)).map(mon => {
+    const [y,m] = mon.split('-');
+    const monLabel = new Date(y, m-1, 1).toLocaleDateString('en-US', {month:'long', year:'numeric'});
+    const days = byMonth[mon].map(k => {
+      const e = dailyJournals[k];
+      const hasData = e.bias || e.biasNote || e.tfNote || Object.values(e.sessionPlan||{}).some(v=>v);
+      const dt = new Date(k+'T00:00:00');
+      const dayLabel = dt.toLocaleDateString('en-US', {weekday:'short', month:'short', day:'numeric'});
+      const isToday = k === today;
+      return `<button class="dj-date-btn ${k===djCurrentDate?'active':''}" onclick="djOpenDate('${k}')">
+        <span>${isToday ? '📍 Today' : dayLabel}</span>
+        ${hasData?'<span class="dj-dot"></span>':''}
+      </button>`;
+    }).join('');
+    return `<div class="dj-month-label">${monLabel}</div>${days}`;
+  }).join('');
+}
+
+function djRenderContent(key, e) {
+  const panel = document.getElementById('dj-content');
+  if (!panel) return;
+  const dateLabel = djFmtKey(key);
+  const todayTrades = trades.filter(t => {
+    if (!t.date) return false;
+    return djDateKey(new Date(t.date)) === key;
+  });
+  const totalPnl = todayTrades.reduce((s,t)=>s+(t.pnl||0),0);
+  const wins = todayTrades.filter(t=>isWin(t)).length;
+
+  panel.innerHTML = `
+    <div class="dj-hero">
+      <div class="dj-hero-date">${dateLabel}</div>
+      <div class="dj-hero-stats">
+        ${todayTrades.length ? `<span class="dj-stat-pill">${todayTrades.length} trade${todayTrades.length!==1?'s':''}</span>` : ''}
+        ${todayTrades.length ? `<span class="dj-stat-pill" style="color:${totalPnl>=0?'var(--win)':'var(--loss)'};border-color:${totalPnl>=0?'var(--win)':'var(--loss)'};">${totalPnl>=0?'+':''}\$${totalPnl.toFixed(2)}</span>` : ''}
+        ${todayTrades.length ? `<span class="dj-stat-pill">${wins}W / ${todayTrades.length-wins}L</span>` : ''}
+      </div>
+      <button class="dj-save-btn" id="dj-save-btn" onclick="djSaveCurrent()" style="margin-left:auto;">💾 Save Journal</button>
+    </div>
+
+    <!-- MARKET BIAS -->
+    <div class="dj-card">
+      <div class="dj-section-title">📊 Market Bias & Analysis</div>
+      <div class="bias-row">
+        <button class="bias-btn bullish ${e.bias==='bullish'?'active':''}" data-bias="bullish" onclick="djSetBias(this)">▲ Bullish</button>
+        <button class="bias-btn neutral ${e.bias==='neutral'?'active':''}" data-bias="neutral" onclick="djSetBias(this)">◆ Neutral</button>
+        <button class="bias-btn bearish ${e.bias==='bearish'?'active':''}" data-bias="bearish" onclick="djSetBias(this)">▼ Bearish</button>
+      </div>
+      <textarea id="dj-bias-note" class="dj-textarea" placeholder="HTF outlook, tổng quan thị trường hôm nay&#10;• XAU/USD đang ở đâu trong cấu trúc lớn?&#10;• Trend D1/W1 đang chỉ hướng nào?&#10;• Có news quan trọng không?&#10;• Kế hoạch tổng thể hôm nay là gì?">${e.biasNote||''}</textarea>
+    </div>
+
+    <!-- RSI + BB MULTI-TF IMAGES -->
+    <div class="dj-card">
+      <div class="dj-section-title">📸 RSI + Bollinger Band — Đa khung</div>
+      <div class="tf-grid" id="dj-tf-grid">
+        ${DJ_TFS.map(tf => `
+          <div class="tf-cell">
+            <div class="tf-label">${tf}</div>
+            <div class="tf-drop" id="tf-drop-${tf}" onclick="djTfClick('${tf}')"
+              ondragover="event.preventDefault()" ondrop="djTfDrop(event,'${tf}')">
+              ${e.tfImages?.[tf]
+                ? `<img src="${e.tfImages[tf]}" onclick="event.stopPropagation();openLightboxSingle('${e.tfImages[tf]}')" title="Click to zoom">
+                   <button onclick="event.stopPropagation();djClearTf('${tf}')" style="position:absolute;top:4px;right:4px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:4px;padding:2px 6px;font-size:10px;cursor:pointer;">✕</button>`
+                : `<span class="tf-add-icon">📷</span><span style="font-size:11px;">Click or drag</span>`
+              }
+            </div>
+            <input type="file" id="tf-file-${tf}" accept="image/*" style="display:none" onchange="djTfFile(event,'${tf}')">
+          </div>`).join('')}
+      </div>
+      <textarea id="dj-tf-note" class="dj-textarea small" style="margin-top:12px;" placeholder="Tổng hợp đa khung:&#10;• Confluence giữa các TF?&#10;• RSI divergence ở đâu?&#10;• BB đang ở phase nào (trending/squeeze)?&#10;• Signal chính hôm nay?">${e.tfNote||''}</textarea>
+    </div>
+
+    <!-- SESSION PLAN -->
+    <div class="dj-card">
+      <div class="dj-section-title">🗓 Session Plan</div>
+      <div class="session-tabs">
+        ${Object.entries(DJ_SESSION_LABELS).map(([k,label]) =>
+          `<button class="session-tab ${k===djActiveSession?'active':''} ${e.sessionPlan?.[k]?'has-content':''}" data-sess="${k}" onclick="djSwitchSession('${k}')">${label}</button>`
+        ).join('')}
+      </div>
+      ${Object.keys(DJ_SESSION_LABELS).map(k =>
+        `<textarea id="dj-sess-${k}" class="dj-textarea ${k!==djActiveSession?'hidden':''}" style="${k!==djActiveSession?'display:none':''}"
+          placeholder="Kế hoạch phiên ${k.toUpperCase()}:&#10;• Setup cần watch là gì?&#10;• Level quan trọng cần phá vỡ?&#10;• Điều kiện để vào lệnh?&#10;• Risk tối đa phiên này?"
+        >${e.sessionPlan?.[k]||''}</textarea>`).join('')}
+    </div>
+
+    <!-- TODAY'S TRADES -->
+    ${todayTrades.length ? `
+    <div class="dj-card">
+      <div class="dj-section-title">📋 Trades hôm nay</div>
+      ${todayTrades.map(t => {
+        const origIdx = trades.indexOf(t);
+        const pnl = t.pnl;
+        return `<div class="dj-trade-row" onclick="openTradeDetail(${origIdx})">
+          <span style="font-size:11px;color:var(--muted);font-family:'Roboto Mono';">${fmtDateTime(t.date)}</span>
+          <span style="font-weight:700;font-size:13px;">${t.pair||'—'}</span>
+          <span class="badge ${t.side==='BUY'?'badge-buy':'badge-sell'}">${t.side||'—'}</span>
+          ${t.strategy?`<span class="badge badge-strat">${t.strategy}</span>`:''}
+          <span style="font-family:'Roboto Mono';font-size:13px;font-weight:700;margin-left:auto;color:${pnl==null?'var(--muted)':pnl>=0?'var(--win)':'var(--loss)'};">
+            ${pnl!=null?(pnl>=0?'+':'')+'\$'+pnl.toFixed(2):'—'}
+          </span>
+          <span class="badge ${isWin(t)?'badge-win':'badge-loss'}">${tradeResult(t)}</span>
+          <span style="font-size:10px;color:var(--muted);">→</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+
+    <div style="height:60px;"></div>
+  `;
+
+  // Attach paste handler for bias note
+  document.getElementById('dj-bias-note')?.addEventListener('paste', e => {
+    const item = Array.from(e.clipboardData.items).find(i => i.type.startsWith('image/'));
+    if (item) { e.preventDefault(); djHandleImageFile(item.getAsFile(), null); }
+  });
+}
+
+function djSetBias(btn) {
+  document.querySelectorAll('.bias-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+function djSwitchSession(sess) {
+  djActiveSession = sess;
+  document.querySelectorAll('.session-tab').forEach(b => {
+    b.classList.toggle('active', b.dataset.sess === sess);
+  });
+  document.querySelectorAll('[id^="dj-sess-"]').forEach(ta => {
+    const k = ta.id.replace('dj-sess-','');
+    ta.style.display = k === sess ? '' : 'none';
+  });
+}
+
+function djTfClick(tf) {
+  document.getElementById('tf-file-' + tf)?.click();
+}
+
+function djTfFile(event, tf) {
+  const file = event.target.files?.[0];
+  if (!file) return;
+  djHandleImageFile(file, tf);
+}
+
+function djTfDrop(event, tf) {
+  event.preventDefault();
+  const file = event.dataTransfer.files?.[0];
+  if (file?.type.startsWith('image/')) djHandleImageFile(file, tf);
+}
+
+function djHandleImageFile(file, tf) {
+  const reader = new FileReader();
+  reader.onload = ev => {
+    const src = ev.target.result;
+    if (!dailyJournals[djCurrentDate]) dailyJournals[djCurrentDate] = djEmptyEntry();
+    if (tf) {
+      if (!dailyJournals[djCurrentDate].tfImages) dailyJournals[djCurrentDate].tfImages = {};
+      dailyJournals[djCurrentDate].tfImages[tf] = src;
+    }
+    // Re-render TF grid only
+    djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+    cloudSave();
+  };
+  reader.readAsDataURL(file);
+}
+
+function djClearTf(tf) {
+  if (!dailyJournals[djCurrentDate]?.tfImages) return;
+  delete dailyJournals[djCurrentDate].tfImages[tf];
+  djRenderContent(djCurrentDate, dailyJournals[djCurrentDate]);
+  cloudSave();
+}
+
+function openLightboxSingle(src) {
+  openLightboxArr(0, [src]);
+}
+
+function djOpenFromCalendar(dateKey) {
+  if (!dailyJournals[dateKey]) dailyJournals[dateKey] = djEmptyEntry();
+  djCurrentDate = dateKey;
+  closeDayModal();
+  showPage('journal', document.querySelector('[onclick*="journal"]'));
+}
+
+function renderJournal() {
+  djRenderSidebar();
+  if (djCurrentDate) djOpenDate(djCurrentDate);
+}
+
 // ===== THEME TOGGLE =====
 let isDark = localStorage.getItem('fxj_theme') !== 'light';
 function applyTheme() {
@@ -3847,6 +4216,9 @@ window.addEventListener('DOMContentLoaded', async () => {
       <div class="nav-item" onclick="showPage('calendar', this)">
         <span class="nav-icon">📅</span> P&L Calendar
       </div>
+      <div class="nav-item" onclick="showPage('journal', this)">
+        <span class="nav-icon">📓</span> Daily Journal
+      </div>
     </nav>
     <div class="sidebar-footer">
       <div style="margin-bottom:8px;font-size:10px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;color:var(--muted);">Initial Capital</div>
@@ -4091,6 +4463,24 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         <!-- Calendar body -->
         <div id="cal-body"></div>
+      </div>
+
+      <!-- DAILY JOURNAL -->
+      <div id="page-journal" class="page">
+        <div class="dj-layout">
+          <div class="dj-sidebar">
+            <button class="dj-new-btn" onclick="djNewToday()">+ New Entry — Today</button>
+            <div id="dj-date-list"></div>
+          </div>
+          <div class="dj-content" id="dj-content">
+            <div class="dj-empty">
+              <div class="dj-empty-icon">📓</div>
+              <div style="font-size:16px;font-weight:700;margin-bottom:8px;">Daily Journal</div>
+              <div style="font-size:13px;margin-bottom:20px;">Ghi chép phân tích thị trường, định hướng mỗi ngày.</div>
+              <button class="dj-save-btn" onclick="djNewToday()">+ Tạo entry hôm nay</button>
+            </div>
+          </div>
+        </div>
       </div>
 
     </div>
